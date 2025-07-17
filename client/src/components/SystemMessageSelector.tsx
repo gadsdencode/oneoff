@@ -12,9 +12,23 @@ interface SystemMessageSelectorProps {
 const PRESET_DESCRIPTIONS = {
   DEFAULT: "General purpose assistant with balanced responses",
   PROFESSIONAL: "Formal business communication style",
-  CREATIVE: "Engaging creative writing and storytelling",
+  CREATIVE: "Engaging creative writing and storytelling", 
   TECHNICAL: "Precise technical documentation and code",
-  CASUAL: "Friendly, conversational, and approachable"
+  CASUAL: "Friendly, conversational, and approachable",
+  SOCRATIC_TUTOR: "Guides learning through questions rather than answers",
+  DEVILS_ADVOCATE: "Challenges ideas to strengthen arguments",
+  HISTORIAN: "Rich narrative storytelling about historical events",
+  MINDFULNESS_COACH: "Gentle wellness and grounding techniques",
+  ROMANTIC_POET: "Crafts beautiful romantic poetry and prose", 
+  CHARMING_FLIRT: "Playful, witty, and respectful banter",
+  DATE_NIGHT_PLANNER: "Creative and personalized romantic experiences"
+} as const;
+
+const PRESET_CATEGORIES = {
+  "Core Personalities": ["DEFAULT", "PROFESSIONAL", "CREATIVE", "TECHNICAL", "CASUAL"],
+  "Learning & Growth": ["SOCRATIC_TUTOR", "DEVILS_ADVOCATE", "HISTORIAN"],
+  "Wellness & Support": ["MINDFULNESS_COACH"],
+  "Romance & Relationships": ["ROMANTIC_POET", "CHARMING_FLIRT", "DATE_NIGHT_PLANNER"]
 } as const;
 
 export const SystemMessageSelector: React.FC<SystemMessageSelectorProps> = ({
@@ -33,27 +47,34 @@ export const SystemMessageSelector: React.FC<SystemMessageSelectorProps> = ({
         </p>
       </div>
 
-      <div className="space-y-3">
-        <div className="grid grid-cols-1 gap-3">
-          {(Object.keys(SYSTEM_MESSAGE_PRESETS) as Array<keyof typeof SYSTEM_MESSAGE_PRESETS>).map((preset) => (
-            <Button
-              key={preset}
-              variant={selectedPreset === preset ? "default" : "outline"}
-              size="sm"
-              onClick={() => onPresetChange(preset)}
-              className="h-auto p-4 text-left justify-start bg-slate-800/50 hover:bg-slate-700/50 border-slate-600"
-            >
-              <div className="w-full">
-                <div className="font-medium text-sm uppercase tracking-wide mb-1 text-white">
-                  {preset}
-                </div>
-                <div className="text-xs text-slate-300 leading-relaxed break-words">
-                  {PRESET_DESCRIPTIONS[preset]}
-                </div>
-              </div>
-            </Button>
-          ))}
-        </div>
+      <div className="space-y-6">
+        {Object.entries(PRESET_CATEGORIES).map(([categoryName, presets]) => (
+          <div key={categoryName} className="space-y-3">
+            <h4 className="text-sm font-medium text-slate-200 uppercase tracking-wide border-b border-slate-600 pb-1">
+              {categoryName}
+            </h4>
+            <div className="grid grid-cols-1 gap-2">
+              {presets.map((preset) => (
+                <Button
+                  key={preset}
+                  variant={selectedPreset === preset ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => onPresetChange(preset)}
+                  className="h-auto p-3 text-left justify-start bg-slate-800/50 hover:bg-slate-700/50 border-slate-600"
+                >
+                  <div className="w-full">
+                    <div className="font-medium text-sm uppercase tracking-wide mb-1 text-white">
+                      {preset.replace(/_/g, ' ')}
+                    </div>
+                    <div className="text-xs text-slate-300 leading-relaxed break-words">
+                      {PRESET_DESCRIPTIONS[preset as keyof typeof PRESET_DESCRIPTIONS]}
+                    </div>
+                  </div>
+                </Button>
+              ))}
+            </div>
+          </div>
+        ))}
         
         <div className="pt-3 border-t border-slate-600">
           <Button
