@@ -1,6 +1,6 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { AzureAIService } from "../lib/azureAI";
-import { Message, AzureAIMessage, ChatCompletionOptions } from "../types";
+import { Message, AzureAIMessage, ChatCompletionOptions, LLMModel } from "../types";
 
 interface UseAzureAIOptions {
   enableStreaming?: boolean;
@@ -13,12 +13,34 @@ interface UseAzureAIReturn {
   isLoading: boolean;
   error: string | null;
   clearError: () => void;
+  currentModel: string | null;
+  updateModel: (model: LLMModel) => void;
+  selectedLLMModel: LLMModel | null;
 }
+
+const SELECTED_MODEL_KEY = 'azure-ai-selected-model';
 
 export const useAzureAI = (options: UseAzureAIOptions = {}): UseAzureAIReturn => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [currentModel, setCurrentModel] = useState<string | null>(null);
+  const [selectedLLMModel, setSelectedLLMModel] = useState<LLMModel | null>(null);
   const aiServiceRef = useRef<AzureAIService | null>(null);
+
+  // Load persisted model selection on mount
+  useEffect(() => {
+    const savedModel = localStorage.getItem(SELECTED_MODEL_KEY);
+    if (savedModel) {
+      try {
+        const parsedModel: LLMModel = JSON.parse(savedModel);
+        setSelectedLLMModel(parsedModel);
+        setCurrentModel(parsedModel.id);
+      } catch (err) {
+        console.warn("Failed to parse saved model:", err);
+        localStorage.removeItem(SELECTED_MODEL_KEY);
+      }
+    }
+  }, []);
 
   // Initialize Azure AI service
   const getAIService = useCallback(() => {
@@ -26,6 +48,13 @@ export const useAzureAI = (options: UseAzureAIOptions = {}): UseAzureAIReturn =>
       try {
         const config = AzureAIService.createFromEnv();
         aiServiceRef.current = new AzureAIService(config);
+        
+        // Set initial model if we have a selected LLM model
+        if (selectedLLMModel) {
+          aiServiceRef.current.updateModel(selectedLLMModel.id);
+        }
+        
+        setCurrentModel(aiServiceRef.current.getCurrentModel());
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : "Failed to initialize Azure AI service";
         setError(errorMessage);
@@ -33,6 +62,27 @@ export const useAzureAI = (options: UseAzureAIOptions = {}): UseAzureAIReturn =>
       }
     }
     return aiServiceRef.current;
+  }, [selectedLLMModel]);
+
+  // Update model selection
+  const updateModel = useCallback((model: LLMModel) => {
+    try {
+      setSelectedLLMModel(model);
+      setCurrentModel(model.id);
+      
+      // Persist to localStorage
+      localStorage.setItem(SELECTED_MODEL_KEY, JSON.stringify(model));
+      
+      // Update AI service if it exists
+      if (aiServiceRef.current) {
+        aiServiceRef.current.updateModel(model.id);
+      }
+      
+      setError(null);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to update model";
+      setError(errorMessage);
+    }
   }, []);
 
   // Convert app messages to Azure AI format
@@ -107,6 +157,9 @@ export const useAzureAI = (options: UseAzureAIOptions = {}): UseAzureAIReturn =>
     sendStreamingMessage,
     isLoading,
     error,
-    clearError
+    clearError,
+    currentModel,
+    updateModel,
+    selectedLLMModel
   };
 }; 

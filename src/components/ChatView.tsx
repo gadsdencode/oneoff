@@ -21,8 +21,9 @@ import {
   CircuitBoard,
   AlertCircle
 } from "lucide-react";
-import { Message, CommandSuggestion } from "../types";
+import { Message, CommandSuggestion, LLMModel } from "../types";
 import { useAzureAI } from "../hooks/useAzureAI";
+import LLMModalSelector from './LLMModelSelector';
 
 interface ParticlesProps {
   className?: string;
@@ -529,13 +530,23 @@ const FuturisticAIChat: React.FC = () => {
   const [activeMessage, setActiveMessage] = useState<string | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showLLMSelector, setShowLLMSelector] = useState(false);
   const [enableStreaming, setEnableStreaming] = useState(true);
   const [streamingResponse, setStreamingResponse] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   // Azure AI hook
-  const { sendMessage, sendStreamingMessage, isLoading, error, clearError } = useAzureAI({
+  const { 
+    sendMessage, 
+    sendStreamingMessage, 
+    isLoading, 
+    error, 
+    clearError,
+    currentModel,
+    updateModel,
+    selectedLLMModel
+  } = useAzureAI({
     enableStreaming,
     chatOptions: {
       maxTokens: 2048,
@@ -655,6 +666,11 @@ const FuturisticAIChat: React.FC = () => {
 
   const removeAttachment = (index: number) => {
     setAttachments(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleModelSelection = (model: LLMModel) => {
+    updateModel(model);
+    setShowLLMSelector(false);
   };
 
   return (
@@ -983,11 +999,28 @@ const FuturisticAIChat: React.FC = () => {
 
           <div>
             <label className="block text-sm font-medium text-slate-300 mb-2">
-              Model Information
+              Model Selection
             </label>
-            <div className="p-3 bg-slate-800 rounded-lg">
-              <p className="text-sm text-slate-300">Model: {import.meta.env.VITE_AZURE_AI_MODEL_NAME || "Ministral-3B"}</p>
-              <p className="text-xs text-slate-400 mt-1">
+            <div className="p-3 bg-slate-800 rounded-lg space-y-3">
+              <div>
+                <p className="text-sm text-slate-300">
+                  Current Model: {selectedLLMModel ? selectedLLMModel.name : (currentModel || "Ministral-3B")}
+                </p>
+                {selectedLLMModel && (
+                  <p className="text-xs text-slate-400 mt-1">
+                    {selectedLLMModel.provider} • {selectedLLMModel.category} • {selectedLLMModel.tier}
+                  </p>
+                )}
+              </div>
+              <RippleButton
+                onClick={() => setShowLLMSelector(true)}
+                className="w-full px-4 py-2 bg-violet-600 hover:bg-violet-700 rounded-lg text-white text-sm transition-colors"
+              >
+                Choose Model
+              </RippleButton>
+            </div>
+            <div className="mt-2">
+              <p className="text-xs text-slate-400">
                 Endpoint: {import.meta.env.VITE_AZURE_AI_ENDPOINT ? "Configured" : "Not configured"}
               </p>
             </div>
@@ -1005,6 +1038,14 @@ const FuturisticAIChat: React.FC = () => {
           </div>
         </div>
       </OrigamiModal>
+
+      {/* LLM Model Selector Modal */}
+      <LLMModalSelector
+        isOpen={showLLMSelector}
+        onClose={() => setShowLLMSelector(false)}
+        onSelect={handleModelSelection}
+        selectedModel={selectedLLMModel}
+      />
     </div>
   );
 };

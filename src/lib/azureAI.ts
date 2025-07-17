@@ -1,7 +1,7 @@
 import ModelClient from "@azure-rest/ai-inference";
 import { AzureKeyCredential } from "@azure/core-auth";
 import { createSseStream } from "@azure/core-sse";
-import { AzureAIMessage, AzureAIConfig, ChatCompletionOptions } from "../types";
+import { AzureAIMessage, AzureAIConfig, ChatCompletionOptions, LLMModel } from "../types";
 
 export class AzureAIService {
   private client: any; // ModelClient type issue - using any for now
@@ -13,6 +13,20 @@ export class AzureAIService {
       config.endpoint,
       new AzureKeyCredential(config.apiKey)
     );
+  }
+
+  /**
+   * Update the model name for this service instance
+   */
+  updateModel(modelName: string): void {
+    this.config.modelName = modelName;
+  }
+
+  /**
+   * Get current model configuration
+   */
+  getCurrentModel(): string {
+    return this.config.modelName;
   }
 
   /**
@@ -149,6 +163,14 @@ export class AzureAIService {
     }
 
     return { endpoint, apiKey, modelName };
+  }
+
+  /**
+   * Create Azure AI config with custom model
+   */
+  static createWithModel(modelName: string): AzureAIConfig {
+    const config = this.createFromEnv();
+    return { ...config, modelName };
   }
 }
 
