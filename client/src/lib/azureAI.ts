@@ -47,7 +47,13 @@ export class AzureAIService {
         description: "Most advanced GPT-4 model with multimodal capabilities",
         category: "multimodal",
         tier: "pro",
-        isFavorite: false
+        isFavorite: false,
+        capabilities: {
+          supportsVision: true,
+          supportsCodeGeneration: true,
+          supportsAnalysis: true,
+          supportsImageGeneration: false
+        }
       },
       {
         id: "gpt-4o-mini",
@@ -60,7 +66,13 @@ export class AzureAIService {
         description: "Efficient and cost-effective GPT-4 model",
         category: "text",
         tier: "free",
-        isFavorite: true
+        isFavorite: true,
+        capabilities: {
+          supportsVision: false,
+          supportsCodeGeneration: true,
+          supportsAnalysis: true,
+          supportsImageGeneration: false
+        }
       },
       {
         id: "gpt-4-turbo",
@@ -73,7 +85,13 @@ export class AzureAIService {
         description: "Enhanced GPT-4 model with improved performance",
         category: "text",
         tier: "pro",
-        isFavorite: false
+        isFavorite: false,
+        capabilities: {
+          supportsVision: true,
+          supportsCodeGeneration: true,
+          supportsAnalysis: true,
+          supportsImageGeneration: false
+        }
       },
       {
         id: "gpt-3.5-turbo",
@@ -86,7 +104,13 @@ export class AzureAIService {
         description: "Fast and efficient language model for general tasks",
         category: "text",
         tier: "free",
-        isFavorite: false
+        isFavorite: false,
+        capabilities: {
+          supportsVision: false,
+          supportsCodeGeneration: true,
+          supportsAnalysis: true,
+          supportsImageGeneration: false
+        }
       },
       // Microsoft Models
       {
@@ -100,7 +124,13 @@ export class AzureAIService {
         description: "Microsoft's efficient small language model",
         category: "text",
         tier: "free",
-        isFavorite: false
+        isFavorite: false,
+        capabilities: {
+          supportsVision: false,
+          supportsCodeGeneration: true,
+          supportsAnalysis: true,
+          supportsImageGeneration: false
+        }
       },
       // Mistral Models
       {
@@ -114,7 +144,13 @@ export class AzureAIService {
         description: "Compact and efficient Mistral model",
         category: "text",
         tier: "free",
-        isFavorite: false
+        isFavorite: false,
+        capabilities: {
+          supportsVision: false,
+          supportsCodeGeneration: true,
+          supportsAnalysis: true,
+          supportsImageGeneration: false
+        }
       },
       {
         id: "mistral-large-2411",
@@ -127,7 +163,13 @@ export class AzureAIService {
         description: "Latest high-performance Mistral model",
         category: "reasoning",
         tier: "pro",
-        isFavorite: false
+        isFavorite: false,
+        capabilities: {
+          supportsVision: false,
+          supportsCodeGeneration: true,
+          supportsAnalysis: true,
+          supportsImageGeneration: false
+        }
       },
       // Meta Models
       {
@@ -141,7 +183,13 @@ export class AzureAIService {
         description: "Meta's latest instruction-tuned model",
         category: "text",
         tier: "free",
-        isFavorite: false
+        isFavorite: false,
+        capabilities: {
+          supportsVision: false,
+          supportsCodeGeneration: true,
+          supportsAnalysis: true,
+          supportsImageGeneration: false
+        }
       },
       {
         id: "llama-3.2-11b-vision-instruct",
@@ -154,7 +202,13 @@ export class AzureAIService {
         description: "Vision-capable Llama model for multimodal tasks",
         category: "multimodal",
         tier: "free",
-        isFavorite: false
+        isFavorite: false,
+        capabilities: {
+          supportsVision: true,
+          supportsCodeGeneration: true,
+          supportsAnalysis: true,
+          supportsImageGeneration: false
+        }
       },
       // Cohere Models
       {
@@ -168,7 +222,13 @@ export class AzureAIService {
         description: "Advanced command-following model from Cohere",
         category: "text",
         tier: "pro",
-        isFavorite: false
+        isFavorite: false,
+        capabilities: {
+          supportsVision: false,
+          supportsCodeGeneration: true,
+          supportsAnalysis: true,
+          supportsImageGeneration: false
+        }
       }
     ];
   }
