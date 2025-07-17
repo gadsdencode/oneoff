@@ -33,6 +33,13 @@ export interface ChatCompletionOptions {
 }
 
 // LLM Model Selection types
+export interface ModelCapabilities {
+  supportsVision: boolean;
+  supportsCodeGeneration: boolean;
+  supportsAnalysis: boolean;
+  supportsImageGeneration: boolean;
+}
+
 export interface LLMModel {
   id: string;
   name: string;

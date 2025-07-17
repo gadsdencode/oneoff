@@ -40,6 +40,110 @@ function extractAzureAIError(error: any): string {
   return 'Unknown error';
 }
 
+// Function to check actual model capabilities by testing API calls
+async function checkModelCapabilities(client: any, modelId: string): Promise<{
+  supportsVision: boolean;
+  supportsCodeGeneration: boolean;
+  supportsAnalysis: boolean;
+  supportsImageGeneration: boolean;
+}> {
+  const capabilities = {
+    supportsVision: false,
+    supportsCodeGeneration: false,
+    supportsAnalysis: false,
+    supportsImageGeneration: false
+  };
+
+  // Test vision capability with a minimal test image
+  try {
+    const testImageBase64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg=="; // 1x1 transparent pixel
+    
+    const visionResponse = await client.path("/chat/completions").post({
+      body: {
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "What do you see in this image? Just say 'I can see an image' if you can process it." },
+              { 
+                type: "image_url", 
+                image_url: { 
+                  url: `data:image/png;base64,${testImageBase64}` 
+                } 
+              }
+            ]
+          }
+        ],
+        max_tokens: 50,
+        temperature: 0.1,
+        model: modelId,
+        stream: false,
+      },
+    });
+
+    if (visionResponse.status === "200" && visionResponse.body?.choices?.[0]?.message?.content) {
+      capabilities.supportsVision = true;
+    }
+  } catch (error) {
+    // Vision not supported, which is expected for most models
+    console.log(`Vision capability test failed for ${modelId}:`, extractAzureAIError(error));
+  }
+
+  // Test code generation capability
+  try {
+    const codeResponse = await client.path("/chat/completions").post({
+      body: {
+        messages: [
+          {
+            role: "user",
+            content: "Write a simple function that adds two numbers in JavaScript. Just the function, no explanation."
+          }
+        ],
+        max_tokens: 100,
+        temperature: 0.1,
+        model: modelId,
+        stream: false,
+      },
+    });
+
+    if (codeResponse.status === "200" && codeResponse.body?.choices?.[0]?.message?.content) {
+      capabilities.supportsCodeGeneration = true;
+    }
+  } catch (error) {
+    console.log(`Code generation capability test failed for ${modelId}:`, extractAzureAIError(error));
+  }
+
+  // Test analysis capability
+  try {
+    const analysisResponse = await client.path("/chat/completions").post({
+      body: {
+        messages: [
+          {
+            role: "user",
+            content: "Analyze this text for sentiment: 'This is a great day!' Respond with just 'positive', 'negative', or 'neutral'."
+          }
+        ],
+        max_tokens: 10,
+        temperature: 0.1,
+        model: modelId,
+        stream: false,
+      },
+    });
+
+    if (analysisResponse.status === "200" && analysisResponse.body?.choices?.[0]?.message?.content) {
+      capabilities.supportsAnalysis = true;
+    }
+  } catch (error) {
+    console.log(`Analysis capability test failed for ${modelId}:`, extractAzureAIError(error));
+  }
+
+  // Note: Image generation typically requires different endpoints/models, 
+  // so we'll keep this as false for now
+  capabilities.supportsImageGeneration = false;
+
+  return capabilities;
+}
+
 // Initialize Azure AI client
 function createAzureAIClient(): { client: any; config: AzureAIConfig } {
   const endpoint = process.env.VITE_AZURE_AI_ENDPOINT;
@@ -78,6 +182,40 @@ const upload = multer({
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
+  // Model capabilities checking endpoint
+  app.get("/api/model/capabilities/:modelId", async (req, res) => {
+    try {
+      const { modelId } = req.params;
+      const { client } = createAzureAIClient();
+      
+      // Cache for capabilities to avoid repeated API calls
+      const cacheKey = `capabilities_${modelId}`;
+      
+      // Check if we have cached capabilities (in a real app, you'd use Redis or similar)
+      // For now, we'll check fresh each time but could implement caching
+      
+      const capabilities = await checkModelCapabilities(client, modelId);
+      
+      res.json({
+        success: true,
+        modelId,
+        capabilities
+      });
+    } catch (error) {
+      console.error("Model capabilities check error:", error);
+      res.status(500).json({ 
+        success: false,
+        error: "Failed to check model capabilities",
+        capabilities: {
+          supportsVision: false,
+          supportsCodeGeneration: true, // Most models support basic text generation
+          supportsAnalysis: true,
+          supportsImageGeneration: false
+        }
+      });
+    }
+  });
+
   // Clone UI endpoints
   app.post("/api/clone-ui/analyze", upload.single('image'), async (req: MulterRequest, res) => {
     try {
