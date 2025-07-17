@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { Message, CommandSuggestion, LLMModel, ModelCapabilities } from "../types";
 import { useAzureAI, SYSTEM_MESSAGE_PRESETS } from "../hooks/useAzureAI";
+import { useIntelligentToast } from "../hooks/useIntelligentToast";
 import LLMModalSelector from './LLMModelSelector';
 import { SystemMessageSelector } from './SystemMessageSelector';
 import CloneUIModal from './CloneUIModal';
@@ -29,6 +30,7 @@ import CreatePageModal from './CreatePageModal';
 import ImproveModal from './ImproveModal';
 import AnalyzeModal from './AnalyzeModal';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
+import { toast } from "sonner";
 
 interface ParticlesProps {
   className?: string;
@@ -585,6 +587,9 @@ const FuturisticAIChat: React.FC = () => {
     if (preset === "custom" && message !== undefined) {
       setCustomSystemMessage(message);
     }
+    
+    // Track system message changes
+    trackAction('system_message_change');
   };
 
   // Azure AI hook
@@ -610,6 +615,34 @@ const FuturisticAIChat: React.FC = () => {
     }
   });
 
+  // Get AI service instance for intelligent toasts
+  const aiServiceRef = useRef<any>(null);
+  useEffect(() => {
+    const getAIService = async () => {
+      try {
+        const { AzureAIService } = await import('../lib/azureAI');
+        if (!aiServiceRef.current) {
+          const config = AzureAIService.createFromEnv();
+          aiServiceRef.current = new AzureAIService(config);
+        }
+      } catch (err) {
+        console.warn('Failed to initialize AI service for toasts:', err);
+      }
+    };
+    getAIService();
+  }, []);
+
+  // Intelligent toast system
+  const {
+    analyzeConversation,
+    trackAction,
+    showOptimizationTip,
+    showPerformanceAlert
+  } = useIntelligentToast({
+    enabled: true,
+    aiService: aiServiceRef.current
+  });
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -617,6 +650,92 @@ const FuturisticAIChat: React.FC = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Performance monitoring and contextual tips
+  useEffect(() => {
+    if (messages.length > 0) {
+      const lastMessage = messages[messages.length - 1];
+      
+      // Contextual coding tips
+      if (lastMessage.role === 'user' && lastMessage.content.includes('```')) {
+        setTimeout(() => {
+          if (selectedLLMModel?.id !== 'gpt-4o' && selectedLLMModel?.id !== 'gpt-4-turbo') {
+            showOptimizationTip(
+              "For code analysis, GPT-4 models provide more accurate and detailed responses",
+              () => {
+                toast.success("Consider switching to GPT-4 for better code assistance!");
+              }
+            );
+          }
+        }, 3000);
+      }
+
+      // High conversation length warning
+      if (messages.length > 20) {
+        setTimeout(() => {
+          showPerformanceAlert(
+            "Long conversation detected. Consider starting a new chat for optimal context and performance",
+            'medium'
+          );
+        }, 5000);
+      }
+
+      // Expert-level complexity detection
+      const complexTerms = ['algorithm', 'optimization', 'architecture', 'scalability', 'performance'];
+      const hasComplexTerms = complexTerms.some(term => 
+        lastMessage.content.toLowerCase().includes(term)
+      );
+      
+      if (hasComplexTerms && selectedSystemPreset === 'DEFAULT') {
+        setTimeout(() => {
+          showOptimizationTip(
+            "For technical discussions, try the Technical system preset for more detailed responses",
+            () => {
+              handleSystemPresetChange('TECHNICAL');
+              toast.success("Switched to Technical system preset!");
+            }
+          );
+        }, 4000);
+      }
+         }
+   }, [messages, selectedLLMModel, selectedSystemPreset, showOptimizationTip, showPerformanceAlert]);
+
+   // Periodic performance monitoring
+   useEffect(() => {
+     if (!selectedLLMModel) return;
+
+     const checkPerformance = () => {
+       // Alert for conversation getting too long
+       if (messages.length > 30) {
+         showPerformanceAlert(
+           "Very long conversation detected. Performance may degrade. Consider starting a new chat.",
+           'high'
+         );
+       }
+
+       // Model efficiency tips based on usage patterns
+       const recentUserMessages = messages.filter(m => m.role === 'user').slice(-5);
+       const hasCodeQuestions = recentUserMessages.some(m => 
+         m.content.toLowerCase().includes('code') || 
+         m.content.toLowerCase().includes('programming') ||
+         m.content.includes('```')
+       );
+
+       if (hasCodeQuestions && selectedLLMModel.category !== 'code' && selectedLLMModel.id !== 'gpt-4o') {
+         setTimeout(() => {
+           showOptimizationTip(
+             "For coding tasks, consider switching to GPT-4o or a code-specialized model for better performance",
+             () => {
+               toast.success("Consider a code-optimized model for programming tasks!");
+             }
+           );
+         }, 3000);
+       }
+     };
+
+     const interval = setInterval(checkPerformance, 120000); // Check every 2 minutes
+     return () => clearInterval(interval);
+   }, [messages, selectedLLMModel, showOptimizationTip, showPerformanceAlert]);
 
   useEffect(() => {
     if (input.startsWith('/')) {
@@ -630,6 +749,7 @@ const FuturisticAIChat: React.FC = () => {
     if (!input.trim() && attachments.length === 0) return;
     if (isLoading) return; // Prevent multiple requests
 
+    const startTime = Date.now();
     const userMessage: Message = {
       id: Date.now().toString(),
       content: input,
@@ -686,7 +806,22 @@ const FuturisticAIChat: React.FC = () => {
         };
         setMessages(prev => [...prev, aiMessage]);
       }
+
+      // Calculate performance metrics and analyze conversation
+      const responseTime = Date.now() - startTime;
+      const estimatedTokens = userMessage.content.length * 1.3; // Rough estimate
+      
+      // Track message sending and analyze conversation
+      setTimeout(() => {
+        if (selectedLLMModel) {
+          analyzeConversation(updatedMessages, selectedLLMModel, responseTime, estimatedTokens);
+        }
+      }, 2000); // Small delay to avoid interrupting user experience
+
     } catch (err) {
+      // Track error occurrence
+      trackAction('error_occurred');
+      
       // Error handling - show error message in chat
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -712,6 +847,9 @@ const FuturisticAIChat: React.FC = () => {
     // Enhanced functionality - open appropriate modal instead of just inserting text
     setShowCommands(false);
     
+    // Track command usage
+    trackAction('use_command', { command: command.prefix });
+    
     switch (command.prefix) {
       case "/clone":
         setShowCloneUIModal(true);
@@ -730,6 +868,18 @@ const FuturisticAIChat: React.FC = () => {
         setInput(command.prefix + " ");
         inputRef.current?.focus();
     }
+
+    // Show feature enhancement tips for advanced commands
+    setTimeout(() => {
+      if (command.prefix === "/analyze" && messages.length < 5) {
+        showOptimizationTip(
+          "Analysis works better with longer conversations. Upload files or ask detailed questions for better insights.",
+          () => {
+            toast.success("Try asking more detailed questions for better analysis!");
+          }
+        );
+      }
+    }, 2000);
   };
 
 
@@ -738,9 +888,26 @@ const FuturisticAIChat: React.FC = () => {
     setAttachments(prev => prev.filter((_, i) => i !== index));
   };
 
+
+
   const handleModelSelection = (model: LLMModel) => {
     updateModel(model);
     setShowLLMSelector(false);
+    
+    // Track model switching
+    trackAction('model_switch');
+    
+    // Show optimization tip for model switching based on conversation context
+    if (messages.length > 3) {
+      setTimeout(() => {
+        showOptimizationTip(
+          `${model.name} is optimized for ${model.category} tasks. Your conversation will benefit from this switch.`,
+          () => {
+            toast.success("Model optimization applied!");
+          }
+        );
+      }, 1500);
+    }
   };
 
   return (
