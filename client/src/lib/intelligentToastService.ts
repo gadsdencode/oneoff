@@ -100,7 +100,7 @@ export class IntelligentToastService {
 
     // Don't analyze too frequently
     const now = Date.now();
-    if (now - this.lastAnalysisTime < 30000) return; // 30 seconds minimum
+    if (now - this.lastAnalysisTime < 120000) return; // 2 minutes minimum between analyses
     this.lastAnalysisTime = now;
 
     try {
@@ -123,7 +123,7 @@ export class IntelligentToastService {
   }
 
   private async performConversationAnalysis(messages: Message[], currentModel: LLMModel): Promise<any> {
-    if (messages.length < 2) return null;
+    if (messages.length < 6) return null; // Require at least 3 exchanges before analyzing
 
     const recentMessages = messages.slice(-10); // Analyze last 10 messages
     const conversationText = recentMessages.map(m => `${m.role}: ${m.content}`).join('\n');
@@ -206,24 +206,24 @@ Return ONLY a JSON object:
       });
     }
 
-    // Context quality recommendations
-    if (analysis.focusScore < 6) {
+    // Context quality recommendations - only for longer conversations that are genuinely unfocused
+    if (analysis.focusScore < 4 && this.metrics.messageCount > 10) {
       recommendations.push({
         id: 'context-focus',
         title: "🎯 Context Enhancement",
-        description: "Conversation is becoming unfocused. Consider starting a new chat or refining your prompts",
+        description: "Conversation is covering many different topics. Consider starting a new chat or focusing on one area",
         category: 'suggestion',
-        priority: 'medium',
+        priority: 'low',
         actionable: false
       });
     }
 
-    // Token usage optimization
-    if (this.metrics.totalTokens > 15000) {
+    // Token usage optimization - much higher threshold
+    if (this.metrics.totalTokens > 25000) {
       recommendations.push({
         id: 'token-optimization',
         title: "📊 Token Usage Alert",
-        description: `High token usage (${this.metrics.totalTokens}). Consider summarizing or starting fresh for better context`,
+        description: `Very high token usage (${this.metrics.totalTokens.toLocaleString()}). Consider starting a new conversation for optimal context`,
         category: 'alert',
         priority: 'high',
         actionable: true,
