@@ -519,7 +519,7 @@ const FuturisticAIChat: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
-      content: "Hello! I'm your AI assistant powered by Azure AI. How can I help you create something amazing today?",
+      content: "Hello! I'm Nomad AI. What would you like to accomplish today?",
       role: "assistant",
       timestamp: new Date(),
     }
