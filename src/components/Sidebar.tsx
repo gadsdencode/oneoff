@@ -3,7 +3,7 @@ import { Bot, Plus, Settings, MessageSquare } from 'lucide-react';
 
 const Sidebar: React.FC = () => {
   return (
-    <div className="hidden md:flex flex-col w-64 bg-secondary/50 border-r border-theme-border p-4 transition-all duration-300">
+    <div className="hidden md:flex flex-col w-64 bg-secondary/50 border-r border-border p-4 transition-all duration-300">
       <div className="flex items-center mb-8">
         <Bot className="w-8 h-8 text-primary mr-3" />
         <h1 className="text-xl font-bold text-foreground">AI Assistant</h1>
