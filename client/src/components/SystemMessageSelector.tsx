@@ -1,7 +1,6 @@
 import React from "react";
 import { SYSTEM_MESSAGE_PRESETS } from "../hooks/useAzureAI";
 import { Button } from "./ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
 
 interface SystemMessageSelectorProps {
@@ -24,31 +23,32 @@ export const SystemMessageSelector: React.FC<SystemMessageSelectorProps> = ({
   onPresetChange
 }) => {
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          AI Personality & Style
-          <Badge variant="outline">System Message</Badge>
-        </CardTitle>
-        <CardDescription>
+    <div className="w-full space-y-4">
+      <div className="text-center space-y-2">
+        <div className="flex items-center justify-center gap-2">
+          <h3 className="text-lg font-semibold text-white">AI Personality & Style</h3>
+          <Badge variant="outline" className="text-xs">System Message</Badge>
+        </div>
+        <p className="text-sm text-slate-300">
           Choose how the AI should respond and communicate with you
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+        </p>
+      </div>
+
+      <div className="space-y-3">
+        <div className="grid grid-cols-1 gap-3">
           {(Object.keys(SYSTEM_MESSAGE_PRESETS) as Array<keyof typeof SYSTEM_MESSAGE_PRESETS>).map((preset) => (
             <Button
               key={preset}
               variant={selectedPreset === preset ? "default" : "outline"}
               size="sm"
               onClick={() => onPresetChange(preset)}
-              className="h-auto p-3 text-left justify-start"
+              className="h-auto p-4 text-left justify-start bg-slate-800/50 hover:bg-slate-700/50 border-slate-600"
             >
-              <div>
-                <div className="font-medium text-xs uppercase tracking-wide">
+              <div className="w-full">
+                <div className="font-medium text-sm uppercase tracking-wide mb-1 text-white">
                   {preset}
                 </div>
-                <div className="text-xs text-muted-foreground mt-1">
+                <div className="text-xs text-slate-300 leading-relaxed break-words">
                   {PRESET_DESCRIPTIONS[preset]}
                 </div>
               </div>
@@ -56,26 +56,28 @@ export const SystemMessageSelector: React.FC<SystemMessageSelectorProps> = ({
           ))}
         </div>
         
-        <div className="pt-2 border-t">
+        <div className="pt-3 border-t border-slate-600">
           <Button
             variant={selectedPreset === "custom" ? "default" : "outline"}
             size="sm"
             onClick={() => onPresetChange("custom", customMessage)}
-            className="w-full"
+            className="w-full bg-slate-800/50 hover:bg-slate-700/50 border-slate-600"
           >
-            Custom System Message
+            <span className="font-medium">Custom System Message</span>
           </Button>
         </div>
 
         {selectedPreset !== "custom" && (
-          <div className="mt-4 p-3 bg-muted rounded-md">
-            <p className="text-sm font-medium mb-2">Current System Message:</p>
-            <p className="text-xs text-muted-foreground whitespace-pre-line">
-              {SYSTEM_MESSAGE_PRESETS[selectedPreset as keyof typeof SYSTEM_MESSAGE_PRESETS]}
-            </p>
+          <div className="mt-4 p-4 bg-slate-800/30 backdrop-blur-sm rounded-lg border border-slate-600/50">
+            <p className="text-sm font-medium mb-3 text-white">Current System Message:</p>
+            <div className="bg-slate-900/50 rounded-md p-3 border border-slate-700/50">
+              <p className="text-xs text-slate-300 whitespace-pre-line leading-relaxed break-words">
+                {SYSTEM_MESSAGE_PRESETS[selectedPreset as keyof typeof SYSTEM_MESSAGE_PRESETS]}
+              </p>
+            </div>
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }; 

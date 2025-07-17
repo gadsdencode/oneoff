@@ -1067,40 +1067,70 @@ const FuturisticAIChat: React.FC = () => {
       </OrigamiModal>
 
       {/* System Message Modal */}
-      <OrigamiModal
-        isOpen={showSystemMessageModal}
-        onClose={() => setShowSystemMessageModal(false)}
-        title="AI Personality & Style"
-      >
-        <div className="space-y-4">
-          <SystemMessageSelector
-            selectedPreset={selectedSystemPreset}
-            customMessage={customSystemMessage}
-            onPresetChange={handleSystemPresetChange}
-          />
-          {selectedSystemPreset === "custom" && (
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-slate-300">
-                Custom System Message
-              </label>
-              <textarea
-                value={customSystemMessage}
-                onChange={(e) => setCustomSystemMessage(e.target.value)}
-                placeholder="Enter your custom system message..."
-                className="w-full h-32 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-400 resize-none focus:outline-none focus:ring-2 focus:ring-violet-500"
-              />
-            </div>
-          )}
-          <div className="flex justify-end gap-2 pt-4 border-t border-slate-700">
-            <RippleButton
+      <AnimatePresence>
+        {showSystemMessageModal && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
               onClick={() => setShowSystemMessageModal(false)}
-              className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-white"
+            />
+            <motion.div
+              className="relative bg-slate-900/90 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+              initial={{ scale: 0, rotateX: -90 }}
+              animate={{ scale: 1, rotateX: 0 }}
+              exit={{ scale: 0, rotateX: 90 }}
+              transition={{ type: "spring", damping: 20, stiffness: 300 }}
+              style={{ transformStyle: "preserve-3d" }}
             >
-              Done
-            </RippleButton>
-          </div>
-        </div>
-      </OrigamiModal>
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-semibold text-white">AI Personality & Style</h3>
+                <RippleButton
+                  onClick={() => setShowSystemMessageModal(false)}
+                  className="p-2 text-slate-400 hover:text-white rounded-lg"
+                >
+                  <X className="w-5 h-5" />
+                </RippleButton>
+              </div>
+              
+              <div className="space-y-6">
+                <SystemMessageSelector
+                  selectedPreset={selectedSystemPreset}
+                  customMessage={customSystemMessage}
+                  onPresetChange={handleSystemPresetChange}
+                />
+                
+                {selectedSystemPreset === "custom" && (
+                  <div className="space-y-3 p-4 bg-slate-800/30 backdrop-blur-sm rounded-lg border border-slate-600/50">
+                    <label className="block text-sm font-medium text-white">
+                      Custom System Message
+                    </label>
+                    <textarea
+                      value={customSystemMessage}
+                      onChange={(e) => setCustomSystemMessage(e.target.value)}
+                      placeholder="Enter your custom system message..."
+                      className="w-full h-32 px-3 py-2 bg-slate-900/50 border border-slate-700 rounded-lg text-white placeholder-slate-400 resize-none focus:outline-none focus:ring-2 focus:ring-violet-500"
+                    />
+                  </div>
+                )}
+                
+                <div className="flex justify-end gap-3 pt-4 border-t border-slate-600">
+                  <RippleButton
+                    onClick={() => setShowSystemMessageModal(false)}
+                    className="px-6 py-2 bg-violet-600 hover:bg-violet-700 rounded-lg text-white font-medium"
+                  >
+                    Apply Settings
+                  </RippleButton>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* LLM Model Selector Modal */}
       <LLMModalSelector
