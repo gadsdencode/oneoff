@@ -1,6 +1,14 @@
 export interface Message {
   id: string;
-  role: 'user' | 'assistant';
   content: string;
-  createdAt: Date;
+  role: "user" | "assistant";
+  timestamp: Date;
+  attachments?: string[];
+}
+
+export interface CommandSuggestion {
+  icon: React.ReactNode;
+  label: string;
+  description: string;
+  prefix: string;
 }
