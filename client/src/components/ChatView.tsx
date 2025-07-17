@@ -25,6 +25,10 @@ import { Message, CommandSuggestion, LLMModel } from "../types";
 import { useAzureAI, SYSTEM_MESSAGE_PRESETS } from "../hooks/useAzureAI";
 import LLMModalSelector from './LLMModelSelector';
 import { SystemMessageSelector } from './SystemMessageSelector';
+import CloneUIModal from './CloneUIModal';
+import CreatePageModal from './CreatePageModal';
+import ImproveModal from './ImproveModal';
+import AnalyzeModal from './AnalyzeModal';
 
 interface ParticlesProps {
   className?: string;
@@ -537,6 +541,12 @@ const FuturisticAIChat: React.FC = () => {
   const [showSystemMessageModal, setShowSystemMessageModal] = useState(false);
   const [selectedSystemPreset, setSelectedSystemPreset] = useState<keyof typeof SYSTEM_MESSAGE_PRESETS | "custom">("DEFAULT");
   const [customSystemMessage, setCustomSystemMessage] = useState<string>("");
+  
+  // Enhanced modal states
+  const [showCloneUIModal, setShowCloneUIModal] = useState(false);
+  const [showCreatePageModal, setShowCreatePageModal] = useState(false);
+  const [showImproveModal, setShowImproveModal] = useState(false);
+  const [showAnalyzeModal, setShowAnalyzeModal] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -675,9 +685,27 @@ const FuturisticAIChat: React.FC = () => {
   };
 
   const selectCommand = (command: CommandSuggestion) => {
-    setInput(command.prefix + " ");
+    // Enhanced functionality - open appropriate modal instead of just inserting text
     setShowCommands(false);
-    inputRef.current?.focus();
+    
+    switch (command.prefix) {
+      case "/clone":
+        setShowCloneUIModal(true);
+        break;
+      case "/page":
+        setShowCreatePageModal(true);
+        break;
+      case "/improve":
+        setShowImproveModal(true);
+        break;
+      case "/analyze":
+        setShowAnalyzeModal(true);
+        break;
+      default:
+        // Fallback to original behavior for unknown commands
+        setInput(command.prefix + " ");
+        inputRef.current?.focus();
+    }
   };
 
   const addAttachment = () => {
@@ -1138,6 +1166,27 @@ const FuturisticAIChat: React.FC = () => {
         onClose={() => setShowLLMSelector(false)}
         onSelect={handleModelSelection}
         selectedModel={selectedLLMModel}
+      />
+
+      {/* Enhanced Feature Modals */}
+      <CloneUIModal 
+        isOpen={showCloneUIModal} 
+        onClose={() => setShowCloneUIModal(false)} 
+      />
+      
+      <CreatePageModal 
+        isOpen={showCreatePageModal} 
+        onClose={() => setShowCreatePageModal(false)} 
+      />
+      
+      <ImproveModal 
+        isOpen={showImproveModal} 
+        onClose={() => setShowImproveModal(false)} 
+      />
+      
+      <AnalyzeModal 
+        isOpen={showAnalyzeModal} 
+        onClose={() => setShowAnalyzeModal(false)} 
       />
     </div>
   );
