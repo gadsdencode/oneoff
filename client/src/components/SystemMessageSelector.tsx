@@ -26,11 +26,10 @@ export const SystemMessageSelector: React.FC<SystemMessageSelectorProps> = ({
     <div className="w-full space-y-4">
       <div className="text-center space-y-2">
         <div className="flex items-center justify-center gap-2">
-          <h3 className="text-lg font-semibold text-white">AI Personality & Style</h3>
-          <Badge variant="outline" className="text-xs">System Message</Badge>
+          <h3 className="text-lg font-semibold text-white">Make Nomad your own</h3>
         </div>
         <p className="text-sm text-slate-300">
-          Choose how the AI should respond and communicate with you
+          Choose how Nomad should respond and communicate with you
         </p>
       </div>
 
