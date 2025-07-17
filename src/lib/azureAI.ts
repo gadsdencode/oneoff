@@ -30,6 +30,150 @@ export class AzureAIService {
   }
 
   /**
+   * Get available Azure AI models
+   * Note: This returns a curated list since Azure AI doesn't provide a direct models API
+   */
+  static getAvailableModels(): LLMModel[] {
+    return [
+      // Azure OpenAI Models
+      {
+        id: "gpt-4o",
+        name: "GPT-4o",
+        provider: "Azure OpenAI",
+        performance: 96,
+        cost: 0.005,
+        latency: 800,
+        contextLength: 128000,
+        description: "Most advanced GPT-4 model with multimodal capabilities",
+        category: "multimodal",
+        tier: "pro",
+        isFavorite: false
+      },
+      {
+        id: "gpt-4o-mini",
+        name: "GPT-4o Mini",
+        provider: "Azure OpenAI",
+        performance: 88,
+        cost: 0.00015,
+        latency: 600,
+        contextLength: 128000,
+        description: "Efficient and cost-effective GPT-4 model",
+        category: "text",
+        tier: "free",
+        isFavorite: true
+      },
+      {
+        id: "gpt-4-turbo",
+        name: "GPT-4 Turbo",
+        provider: "Azure OpenAI",
+        performance: 94,
+        cost: 0.01,
+        latency: 1000,
+        contextLength: 128000,
+        description: "Enhanced GPT-4 model with improved performance",
+        category: "text",
+        tier: "pro",
+        isFavorite: false
+      },
+      {
+        id: "gpt-3.5-turbo",
+        name: "GPT-3.5 Turbo",
+        provider: "Azure OpenAI",
+        performance: 82,
+        cost: 0.0015,
+        latency: 500,
+        contextLength: 16000,
+        description: "Fast and efficient language model for general tasks",
+        category: "text",
+        tier: "free",
+        isFavorite: false
+      },
+      // Microsoft Models
+      {
+        id: "phi-4",
+        name: "Phi-4",
+        provider: "Microsoft",
+        performance: 85,
+        cost: 0.0005,
+        latency: 400,
+        contextLength: 16384,
+        description: "Microsoft's efficient small language model",
+        category: "text",
+        tier: "free",
+        isFavorite: false
+      },
+      // Mistral Models
+      {
+        id: "ministral-3b",
+        name: "Ministral 3B",
+        provider: "Mistral AI",
+        performance: 78,
+        cost: 0.0001,
+        latency: 300,
+        contextLength: 131072,
+        description: "Compact and efficient Mistral model",
+        category: "text",
+        tier: "free",
+        isFavorite: false
+      },
+      {
+        id: "mistral-large-2411",
+        name: "Mistral Large 2411",
+        provider: "Mistral AI",
+        performance: 92,
+        cost: 0.008,
+        latency: 900,
+        contextLength: 128000,
+        description: "Latest high-performance Mistral model",
+        category: "reasoning",
+        tier: "pro",
+        isFavorite: false
+      },
+      // Meta Models
+      {
+        id: "llama-3.3-70b-instruct",
+        name: "Llama 3.3 70B Instruct",
+        provider: "Meta",
+        performance: 89,
+        cost: 0.002,
+        latency: 1200,
+        contextLength: 128000,
+        description: "Meta's latest instruction-tuned model",
+        category: "text",
+        tier: "free",
+        isFavorite: false
+      },
+      {
+        id: "llama-3.2-11b-vision-instruct",
+        name: "Llama 3.2 11B Vision",
+        provider: "Meta",
+        performance: 84,
+        cost: 0.0008,
+        latency: 800,
+        contextLength: 128000,
+        description: "Vision-capable Llama model for multimodal tasks",
+        category: "multimodal",
+        tier: "free",
+        isFavorite: false
+      },
+      // Cohere Models
+      {
+        id: "cohere-command-r-plus",
+        name: "Command R+",
+        provider: "Cohere",
+        performance: 87,
+        cost: 0.003,
+        latency: 700,
+        contextLength: 131072,
+        description: "Advanced command-following model from Cohere",
+        category: "text",
+        tier: "pro",
+        isFavorite: false
+      }
+    ];
+  }
+
+  /**
    * Send a single chat completion request
    */
   async sendChatCompletion(

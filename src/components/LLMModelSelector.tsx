@@ -24,104 +24,16 @@ import {
   ChevronDown,
   ArrowUpDown,
   Heart,
-  HeartOff
+  HeartOff,
+  X
 } from "lucide-react";
 import { LLMModel } from "@/types";
+import { AzureAIService } from "@/lib/azureAI";
 
-// Azure AI compatible models - these would typically come from an API
-const mockModels: LLMModel[] = [
-  {
-    id: "gpt-4-turbo",
-    name: "GPT-4 Turbo",
-    provider: "OpenAI",
-    performance: 95,
-    cost: 0.03,
-    latency: 1200,
-    contextLength: 128000,
-    description: "Most capable GPT-4 model with improved instruction following",
-    category: "text",
-    tier: "pro",
-    isFavorite: false
-  },
-  {
-    id: "claude-3-opus",
-    name: "Claude 3 Opus",
-    provider: "Anthropic",
-    performance: 94,
-    cost: 0.015,
-    latency: 1100,
-    contextLength: 200000,
-    description: "Anthropic's most powerful model for complex reasoning",
-    category: "reasoning",
-    tier: "pro",
-    isFavorite: true
-  },
-  {
-    id: "gemini-pro",
-    name: "Gemini Pro",
-    provider: "Google",
-    performance: 88,
-    cost: 0.001,
-    latency: 800,
-    contextLength: 32000,
-    description: "Google's multimodal AI model with strong performance",
-    category: "multimodal",
-    tier: "free",
-    isFavorite: false
-  },
-  {
-    id: "codellama-34b",
-    name: "Code Llama 34B",
-    provider: "Meta",
-    performance: 85,
-    cost: 0.0008,
-    latency: 900,
-    contextLength: 16000,
-    description: "Specialized for code generation and understanding",
-    category: "code",
-    tier: "free",
-    isFavorite: true
-  },
-  {
-    id: "gpt-3.5-turbo",
-    name: "GPT-3.5 Turbo",
-    provider: "OpenAI",
-    performance: 82,
-    cost: 0.002,
-    latency: 600,
-    contextLength: 16000,
-    description: "Fast and efficient model for most tasks",
-    category: "text",
-    tier: "free",
-    isFavorite: false
-  },
-  {
-    id: "claude-3-haiku",
-    name: "Claude 3 Haiku",
-    provider: "Anthropic",
-    performance: 78,
-    cost: 0.00025,
-    latency: 400,
-    contextLength: 200000,
-    description: "Fastest Claude model with good performance",
-    category: "text",
-    tier: "free",
-    isFavorite: false
-  },
-  {
-    id: "ministral-3b",
-    name: "Ministral 3B",
-    provider: "Azure AI",
-    performance: 76,
-    cost: 0.0001,
-    latency: 350,
-    contextLength: 32000,
-    description: "Fast and efficient Azure AI model for general tasks",
-    category: "text",
-    tier: "free",
-    isFavorite: false
-  }
-];
+// Get Azure AI models from the service
+const getAzureModels = (): LLMModel[] => {
+  return AzureAIService.getAvailableModels();
+};
 
 const categoryIcons = {
   text: Brain,
@@ -131,9 +43,9 @@ const categoryIcons = {
 };
 
 const tierColors = {
-  free: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400",
-  pro: "bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400",
-  enterprise: "bg-purple-100 text-purple-700 dark:bg-purple-900/20 dark:text-purple-400"
+  free: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
+  pro: "bg-violet-500/20 text-violet-400 border-violet-500/30",
+  enterprise: "bg-amber-500/20 text-amber-400 border-amber-500/30"
 };
 
 interface ModelCardProps {
@@ -152,18 +64,18 @@ const ModelCard: React.FC<ModelCardProps> = ({ model, onFavorite, onSelect, isSe
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
-      whileHover={{ y: -4 }}
+      whileHover={{ y: -2, scale: 1.02 }}
       transition={{ duration: 0.2 }}
     >
       <Card 
         className={cn(
-          "relative overflow-hidden border-2 transition-all duration-300 cursor-pointer group",
-          "bg-gradient-to-br from-background via-background to-muted/20",
-          "hover:shadow-xl hover:shadow-primary/10",
-          "rounded-3xl p-6",
+          "relative overflow-hidden border transition-all duration-300 cursor-pointer group",
+          "bg-slate-900/50 backdrop-blur-xl border-slate-700/50",
+          "hover:bg-slate-800/50 hover:border-violet-500/50 hover:shadow-lg hover:shadow-violet-500/10",
+          "rounded-2xl p-6",
           isSelected 
-            ? "border-primary shadow-lg shadow-primary/20 bg-gradient-to-br from-primary/5 via-background to-primary/10" 
-            : "border-border hover:border-primary/50"
+            ? "border-violet-500 bg-violet-500/10 shadow-lg shadow-violet-500/20" 
+            : ""
         )}
         onClick={() => onSelect(model)}
       >
@@ -175,41 +87,41 @@ const ModelCard: React.FC<ModelCardProps> = ({ model, onFavorite, onSelect, isSe
             e.stopPropagation();
             onFavorite(model.id);
           }}
-          className="absolute top-4 right-4 p-2 rounded-full bg-background/80 backdrop-blur-sm border border-border/50 hover:bg-background transition-colors"
+          className="absolute top-4 right-4 p-2 rounded-full bg-slate-800/80 backdrop-blur-sm border border-slate-600/50 hover:bg-slate-700/80 transition-colors"
         >
           {model.isFavorite ? (
-            <Heart className="w-4 h-4 text-red-500 fill-current" />
+            <Heart className="w-4 h-4 text-red-400 fill-current" />
           ) : (
-            <HeartOff className="w-4 h-4 text-muted-foreground" />
+            <HeartOff className="w-4 h-4 text-slate-400" />
           )}
         </motion.button>
 
         {/* Header */}
         <div className="flex items-start gap-3 mb-4">
-          <div className="p-3 rounded-2xl bg-primary/10 border border-primary/20">
-            <CategoryIcon className="w-6 h-6 text-primary" />
+          <div className="p-3 rounded-xl bg-violet-500/20 border border-violet-500/30">
+            <CategoryIcon className="w-6 h-6 text-violet-400" />
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-lg text-foreground truncate">{model.name}</h3>
-            <p className="text-sm text-muted-foreground">{model.provider}</p>
+            <h3 className="font-semibold text-lg text-white truncate">{model.name}</h3>
+            <p className="text-sm text-slate-400">{model.provider}</p>
           </div>
         </div>
 
         {/* Description */}
-        <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{model.description}</p>
+        <p className="text-sm text-slate-300 mb-4 line-clamp-2">{model.description}</p>
 
         {/* Metrics */}
         <div className="grid grid-cols-3 gap-3 mb-4">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <div className="text-center p-3 rounded-xl bg-muted/50 border border-border/50">
-                  <TrendingUp className="w-4 h-4 text-green-600 mx-auto mb-1" />
-                  <div className="text-sm font-semibold">{model.performance}%</div>
-                  <div className="text-xs text-muted-foreground">Performance</div>
+                <div className="text-center p-3 rounded-xl bg-slate-800/50 border border-slate-700/50">
+                  <TrendingUp className="w-4 h-4 text-emerald-400 mx-auto mb-1" />
+                  <div className="text-sm font-semibold text-white">{model.performance}%</div>
+                  <div className="text-xs text-slate-400">Performance</div>
                 </div>
               </TooltipTrigger>
-              <TooltipContent>
+              <TooltipContent className="bg-slate-800 border-slate-700">
                 <p>Model performance score</p>
               </TooltipContent>
             </Tooltip>
@@ -218,13 +130,13 @@ const ModelCard: React.FC<ModelCardProps> = ({ model, onFavorite, onSelect, isSe
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <div className="text-center p-3 rounded-xl bg-muted/50 border border-border/50">
-                  <DollarSign className="w-4 h-4 text-blue-600 mx-auto mb-1" />
-                  <div className="text-sm font-semibold">${model.cost}</div>
-                  <div className="text-xs text-muted-foreground">Per 1K tokens</div>
+                <div className="text-center p-3 rounded-xl bg-slate-800/50 border border-slate-700/50">
+                  <DollarSign className="w-4 h-4 text-blue-400 mx-auto mb-1" />
+                  <div className="text-sm font-semibold text-white">${model.cost}</div>
+                  <div className="text-xs text-slate-400">Per 1K tokens</div>
                 </div>
               </TooltipTrigger>
-              <TooltipContent>
+              <TooltipContent className="bg-slate-800 border-slate-700">
                 <p>Cost per 1000 tokens</p>
               </TooltipContent>
             </Tooltip>
@@ -233,13 +145,13 @@ const ModelCard: React.FC<ModelCardProps> = ({ model, onFavorite, onSelect, isSe
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <div className="text-center p-3 rounded-xl bg-muted/50 border border-border/50">
-                  <Clock className="w-4 h-4 text-orange-600 mx-auto mb-1" />
-                  <div className="text-sm font-semibold">{model.latency}ms</div>
-                  <div className="text-xs text-muted-foreground">Latency</div>
+                <div className="text-center p-3 rounded-xl bg-slate-800/50 border border-slate-700/50">
+                  <Clock className="w-4 h-4 text-orange-400 mx-auto mb-1" />
+                  <div className="text-sm font-semibold text-white">{model.latency}ms</div>
+                  <div className="text-xs text-slate-400">Latency</div>
                 </div>
               </TooltipTrigger>
-              <TooltipContent>
+              <TooltipContent className="bg-slate-800 border-slate-700">
                 <p>Average response time</p>
               </TooltipContent>
             </Tooltip>
@@ -248,10 +160,10 @@ const ModelCard: React.FC<ModelCardProps> = ({ model, onFavorite, onSelect, isSe
 
         {/* Tags */}
         <div className="flex items-center justify-between">
-          <Badge variant="outline" className="capitalize rounded-full">
+          <Badge variant="outline" className="capitalize border-slate-600 text-slate-300 bg-slate-800/50">
             {model.category}
           </Badge>
-          <Badge className={cn("rounded-full", tierColors[model.tier])}>
+          <Badge className={cn("capitalize border", tierColors[model.tier])}>
             {model.tier}
           </Badge>
         </div>
@@ -263,9 +175,9 @@ const ModelCard: React.FC<ModelCardProps> = ({ model, onFavorite, onSelect, isSe
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               exit={{ scale: 0 }}
-              className="absolute top-4 left-4 w-6 h-6 bg-primary rounded-full flex items-center justify-center"
+              className="absolute top-4 left-4 w-6 h-6 bg-violet-500 rounded-full flex items-center justify-center"
             >
-              <Star className="w-4 h-4 text-primary-foreground fill-current" />
+              <Star className="w-4 h-4 text-white fill-current" />
             </motion.div>
           )}
         </AnimatePresence>
@@ -300,25 +212,25 @@ const FilterControls: React.FC<FilterControlsProps> = ({
   onToggleFavorites
 }) => {
   return (
-    <div className="flex flex-wrap gap-4 items-center justify-between p-4 rounded-3xl bg-muted/30 border border-border/50 backdrop-blur-sm">
+    <div className="flex flex-wrap gap-4 items-center justify-between p-4 rounded-2xl bg-slate-800/30 border border-slate-700/50 backdrop-blur-sm">
       {/* Search */}
       <div className="relative flex-1 min-w-[250px]">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
         <Input
           placeholder="Search models..."
           value={searchTerm}
           onChange={(e) => onSearchChange(e.target.value)}
-          className="pl-10 h-10 rounded-2xl border-border/50 bg-background/50 backdrop-blur-sm text-sm"
+          className="pl-10 h-10 rounded-xl border-slate-600 bg-slate-800/50 text-white placeholder:text-slate-400 text-sm focus:border-violet-500"
         />
       </div>
 
       {/* Filters */}
       <div className="flex gap-2 items-center flex-wrap">
         <Select value={selectedCategory} onValueChange={onCategoryChange}>
-          <SelectTrigger className="w-[120px] h-10 rounded-2xl border-border/50 bg-background/50 text-sm">
+          <SelectTrigger className="w-[120px] h-10 rounded-xl border-slate-600 bg-slate-800/50 text-white text-sm">
             <SelectValue placeholder="Category" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="bg-slate-800 border-slate-700">
             <SelectItem value="all">All</SelectItem>
             <SelectItem value="text">Text</SelectItem>
             <SelectItem value="code">Code</SelectItem>
@@ -328,10 +240,10 @@ const FilterControls: React.FC<FilterControlsProps> = ({
         </Select>
 
         <Select value={selectedTier} onValueChange={onTierChange}>
-          <SelectTrigger className="w-[100px] h-10 rounded-2xl border-border/50 bg-background/50 text-sm">
+          <SelectTrigger className="w-[100px] h-10 rounded-xl border-slate-600 bg-slate-800/50 text-white text-sm">
             <SelectValue placeholder="Tier" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="bg-slate-800 border-slate-700">
             <SelectItem value="all">All</SelectItem>
             <SelectItem value="free">Free</SelectItem>
             <SelectItem value="pro">Pro</SelectItem>
@@ -340,11 +252,11 @@ const FilterControls: React.FC<FilterControlsProps> = ({
         </Select>
 
         <Select value={sortBy} onValueChange={onSortChange}>
-          <SelectTrigger className="w-[120px] h-10 rounded-2xl border-border/50 bg-background/50 text-sm">
+          <SelectTrigger className="w-[120px] h-10 rounded-xl border-slate-600 bg-slate-800/50 text-white text-sm">
             <ArrowUpDown className="w-3 h-3 mr-1" />
             <SelectValue placeholder="Sort" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="bg-slate-800 border-slate-700">
             <SelectItem value="performance">Performance</SelectItem>
             <SelectItem value="cost">Cost</SelectItem>
             <SelectItem value="latency">Latency</SelectItem>
@@ -356,7 +268,12 @@ const FilterControls: React.FC<FilterControlsProps> = ({
           variant={showFavoritesOnly ? "default" : "outline"}
           onClick={onToggleFavorites}
           size="sm"
-          className="h-10 px-4 rounded-2xl"
+          className={cn(
+            "h-10 px-4 rounded-xl transition-colors",
+            showFavoritesOnly 
+              ? "bg-violet-600 hover:bg-violet-700 text-white" 
+              : "border-slate-600 bg-slate-800/50 text-slate-300 hover:bg-slate-700/50"
+          )}
         >
           <Star className={cn("w-3 h-3 mr-1", showFavoritesOnly && "fill-current")} />
           Favorites
@@ -379,7 +296,7 @@ const LLMModalSelector: React.FC<LLMModalSelectorProps> = ({
   onSelect,
   selectedModel: externalSelectedModel
 }) => {
-  const [models, setModels] = React.useState<LLMModel[]>(mockModels);
+  const [models, setModels] = React.useState<LLMModel[]>(getAzureModels());
   const [selectedModel, setSelectedModel] = React.useState<LLMModel | null>(externalSelectedModel || null);
   const [searchTerm, setSearchTerm] = React.useState("");
   const [selectedCategory, setSelectedCategory] = React.useState("all");
@@ -434,24 +351,32 @@ const LLMModalSelector: React.FC<LLMModalSelectorProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden rounded-3xl p-0">
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto bg-slate-950/95 backdrop-blur-xl border-slate-700/50 text-white p-0">
         <div className="flex flex-col h-full">
           {/* Header */}
-          <div className="p-6 pb-4 border-b border-border/50">
+          <div className="p-6 pb-4 border-b border-slate-700/50">
             <DialogHeader>
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="space-y-2"
               >
-                <DialogTitle className="text-3xl font-bold bg-gradient-to-r from-primary via-primary/80 to-primary/60 bg-clip-text text-transparent">
-                  Select LLM Model
+                <DialogTitle className="text-3xl font-bold bg-gradient-to-r from-violet-400 via-purple-400 to-violet-600 bg-clip-text text-transparent">
+                  Select AI Model
                 </DialogTitle>
-                <DialogDescription className="text-base text-muted-foreground">
-                  Compare and select the perfect AI model for your needs
+                <DialogDescription className="text-base text-slate-300">
+                  Choose from Azure's premium collection of AI models
                 </DialogDescription>
               </motion.div>
             </DialogHeader>
+            <motion.button
+              onClick={onClose}
+              className="absolute right-4 top-4 p-2 rounded-xl bg-slate-800/50 hover:bg-slate-700/50 transition-colors"
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+            >
+              <X className="w-5 h-5 text-slate-400" />
+            </motion.button>
           </div>
 
           {/* Content */}
@@ -483,11 +408,11 @@ const LLMModalSelector: React.FC<LLMModalSelectorProps> = ({
               transition={{ delay: 0.2 }}
               className="flex items-center justify-between"
             >
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-slate-400">
                 Showing {filteredAndSortedModels.length} of {models.length} models
               </p>
               {selectedModel && (
-                <Badge variant="outline" className="text-sm px-3 py-1 rounded-full">
+                <Badge variant="outline" className="text-sm px-3 py-1 border-violet-500/50 text-violet-400 bg-violet-500/10">
                   Selected: {selectedModel.name}
                 </Badge>
               )}
@@ -518,22 +443,22 @@ const LLMModalSelector: React.FC<LLMModalSelectorProps> = ({
                 animate={{ opacity: 1 }}
                 className="text-center py-12"
               >
-                <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-muted/50 flex items-center justify-center">
-                  <Search className="w-10 h-10 text-muted-foreground" />
+                <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-slate-800/50 flex items-center justify-center">
+                  <Search className="w-10 h-10 text-slate-400" />
                 </div>
-                <h3 className="text-lg font-semibold mb-2">No models found</h3>
-                <p className="text-muted-foreground">Try adjusting your search criteria or filters.</p>
+                <h3 className="text-lg font-semibold mb-2 text-white">No models found</h3>
+                <p className="text-slate-400">Try adjusting your search criteria or filters.</p>
               </motion.div>
             )}
           </div>
 
           {/* Footer */}
-          <div className="p-6 pt-4 border-t border-border/50 bg-muted/20">
+          <div className="p-6 pt-4 border-t border-slate-700/50 bg-slate-900/30">
             <div className="flex items-center justify-between">
               <Button
                 variant="outline"
                 onClick={onClose}
-                className="rounded-2xl px-6"
+                className="border-slate-600 bg-slate-800/50 text-slate-300 hover:bg-slate-700/50 px-6"
               >
                 Cancel
               </Button>
@@ -541,44 +466,44 @@ const LLMModalSelector: React.FC<LLMModalSelectorProps> = ({
                 {selectedModel && (
                   <Dialog>
                     <DialogTrigger asChild>
-                      <Button variant="outline" className="rounded-2xl px-6">
+                      <Button variant="outline" className="border-slate-600 bg-slate-800/50 text-slate-300 hover:bg-slate-700/50 px-6">
                         View Details
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="max-w-2xl rounded-3xl">
+                    <DialogContent className="max-w-2xl bg-slate-950/95 backdrop-blur-xl border-slate-700/50 text-white">
                       <DialogHeader>
-                        <DialogTitle className="text-2xl">{selectedModel.name}</DialogTitle>
-                        <DialogDescription className="text-base">
+                        <DialogTitle className="text-2xl text-white">{selectedModel.name}</DialogTitle>
+                        <DialogDescription className="text-base text-slate-300">
                           {selectedModel.description}
                         </DialogDescription>
                       </DialogHeader>
                       <div className="grid grid-cols-2 gap-6 mt-6">
                         <div className="space-y-4">
                           <div>
-                            <label className="text-sm font-medium text-muted-foreground">Provider</label>
-                            <p className="text-lg font-semibold">{selectedModel.provider}</p>
+                            <label className="text-sm font-medium text-slate-400">Provider</label>
+                            <p className="text-lg font-semibold text-white">{selectedModel.provider}</p>
                           </div>
                           <div>
-                            <label className="text-sm font-medium text-muted-foreground">Performance</label>
-                            <p className="text-lg font-semibold">{selectedModel.performance}%</p>
+                            <label className="text-sm font-medium text-slate-400">Performance</label>
+                            <p className="text-lg font-semibold text-white">{selectedModel.performance}%</p>
                           </div>
                           <div>
-                            <label className="text-sm font-medium text-muted-foreground">Context Length</label>
-                            <p className="text-lg font-semibold">{selectedModel.contextLength.toLocaleString()} tokens</p>
+                            <label className="text-sm font-medium text-slate-400">Context Length</label>
+                            <p className="text-lg font-semibold text-white">{selectedModel.contextLength.toLocaleString()} tokens</p>
                           </div>
                         </div>
                         <div className="space-y-4">
                           <div>
-                            <label className="text-sm font-medium text-muted-foreground">Cost per 1K tokens</label>
-                            <p className="text-lg font-semibold">${selectedModel.cost}</p>
+                            <label className="text-sm font-medium text-slate-400">Cost per 1K tokens</label>
+                            <p className="text-lg font-semibold text-white">${selectedModel.cost}</p>
                           </div>
                           <div>
-                            <label className="text-sm font-medium text-muted-foreground">Latency</label>
-                            <p className="text-lg font-semibold">{selectedModel.latency}ms</p>
+                            <label className="text-sm font-medium text-slate-400">Latency</label>
+                            <p className="text-lg font-semibold text-white">{selectedModel.latency}ms</p>
                           </div>
                           <div>
-                            <label className="text-sm font-medium text-muted-foreground">Tier</label>
-                            <Badge className={cn("capitalize", tierColors[selectedModel.tier])}>
+                            <label className="text-sm font-medium text-slate-400">Tier</label>
+                            <Badge className={cn("capitalize border", tierColors[selectedModel.tier])}>
                               {selectedModel.tier}
                             </Badge>
                           </div>
@@ -590,7 +515,7 @@ const LLMModalSelector: React.FC<LLMModalSelectorProps> = ({
                 <Button
                   onClick={handleConfirmSelection}
                   disabled={!selectedModel}
-                  className="rounded-2xl px-8"
+                  className="bg-violet-600 hover:bg-violet-700 text-white px-8 disabled:opacity-50"
                 >
                   Select Model
                 </Button>
