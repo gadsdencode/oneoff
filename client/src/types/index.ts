@@ -45,4 +45,10 @@ export interface LLMModel {
   category: "text" | "code" | "multimodal" | "reasoning";
   tier: "free" | "pro" | "enterprise";
   isFavorite: boolean;
+  capabilities?: {
+    supportsVision?: boolean;
+    supportsCodeGeneration?: boolean;
+    supportsAnalysis?: boolean;
+    supportsImageGeneration?: boolean;
+  };
 }

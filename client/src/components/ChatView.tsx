@@ -29,6 +29,7 @@ import CloneUIModal from './CloneUIModal';
 import CreatePageModal from './CreatePageModal';
 import ImproveModal from './ImproveModal';
 import AnalyzeModal from './AnalyzeModal';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 
 interface ParticlesProps {
   className?: string;
@@ -291,6 +292,27 @@ const Particles: React.FC<ParticlesProps> = ({
       <canvas ref={canvasRef} className="h-full w-full" />
     </div>
   );
+};
+
+// Helper function to check if a command is available for the current model
+const isCommandAvailable = (command: string, model: LLMModel | null): boolean => {
+  if (!model || !model.capabilities) {
+    // Default to available if no capability info (for backward compatibility)
+    return true;
+  }
+
+  switch (command) {
+    case "/clone":
+      return model.capabilities.supportsVision === true;
+    case "/page":
+      return model.capabilities.supportsCodeGeneration === true;
+    case "/improve":
+      return model.capabilities.supportsCodeGeneration === true;
+    case "/analyze":
+      return model.capabilities.supportsAnalysis === true;
+    default:
+      return true;
+  }
 };
 
 const commandSuggestions: CommandSuggestion[] = [
@@ -858,19 +880,54 @@ const FuturisticAIChat: React.FC = () => {
                   exit={{ opacity: 0, height: 0 }}
                 >
                   <div className="grid grid-cols-2 gap-2">
-                    {commandSuggestions.map((command) => (
-                      <RippleButton
-                        key={command.prefix}
-                        onClick={() => selectCommand(command)}
-                        className="flex items-center gap-3 p-3 bg-slate-800/50 hover:bg-slate-700/50 rounded-lg border border-slate-700/30 text-left"
-                      >
-                        <div className="text-violet-400">{command.icon}</div>
-                        <div>
-                          <div className="text-sm font-medium">{command.label}</div>
-                          <div className="text-xs text-slate-400">{command.description}</div>
-                        </div>
-                      </RippleButton>
-                    ))}
+                    {commandSuggestions.map((command) => {
+                      const isAvailable = isCommandAvailable(command.prefix, selectedLLMModel);
+                      const buttonContent = (
+                        <RippleButton
+                          key={command.prefix}
+                          onClick={() => isAvailable && selectCommand(command)}
+                          disabled={!isAvailable}
+                          className={`flex items-center gap-3 p-3 rounded-lg border text-left transition-all duration-200 ${
+                            isAvailable
+                              ? "bg-slate-800/50 hover:bg-slate-700/50 border-slate-700/30 cursor-pointer"
+                              : "bg-slate-900/30 border-slate-800/30 cursor-not-allowed opacity-50"
+                          }`}
+                        >
+                          <div className={`${isAvailable ? "text-violet-400" : "text-slate-500"}`}>
+                            {command.icon}
+                          </div>
+                          <div>
+                            <div className={`text-sm font-medium ${isAvailable ? "text-white" : "text-slate-500"}`}>
+                              {command.label}
+                            </div>
+                            <div className={`text-xs ${isAvailable ? "text-slate-400" : "text-slate-600"}`}>
+                              {isAvailable ? command.description : "Not available with current model"}
+                            </div>
+                          </div>
+                        </RippleButton>
+                      );
+
+                      if (!isAvailable) {
+                        return (
+                          <TooltipProvider key={command.prefix}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                {buttonContent}
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="bg-slate-800 border-slate-700">
+                                <p className="text-sm">
+                                  This feature requires a model with {command.prefix === "/clone" ? "vision" : "code generation"} capabilities.
+                                  <br />
+                                  Try switching to GPT-4o or Llama 3.2 Vision for full functionality.
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        );
+                      }
+
+                      return buttonContent;
+                    })}
                   </div>
                 </motion.div>
               )}

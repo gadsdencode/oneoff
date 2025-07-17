@@ -159,7 +159,7 @@ const ModelCard: React.FC<ModelCardProps> = ({ model, onFavorite, onSelect, isSe
         </div>
 
         {/* Tags */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-3">
           <Badge variant="outline" className="capitalize border-slate-600 text-slate-300 bg-slate-800/50">
             {model.category}
           </Badge>
@@ -167,6 +167,35 @@ const ModelCard: React.FC<ModelCardProps> = ({ model, onFavorite, onSelect, isSe
             {model.tier}
           </Badge>
         </div>
+
+        {/* Capabilities */}
+        {model.capabilities && (
+          <div className="space-y-2">
+            <div className="text-xs text-slate-400 font-medium">Capabilities</div>
+            <div className="flex flex-wrap gap-1">
+              {model.capabilities.supportsVision && (
+                <Badge variant="outline" className="text-xs border-violet-500/50 text-violet-300 bg-violet-500/10">
+                  Vision
+                </Badge>
+              )}
+              {model.capabilities.supportsCodeGeneration && (
+                <Badge variant="outline" className="text-xs border-blue-500/50 text-blue-300 bg-blue-500/10">
+                  Code Gen
+                </Badge>
+              )}
+              {model.capabilities.supportsAnalysis && (
+                <Badge variant="outline" className="text-xs border-emerald-500/50 text-emerald-300 bg-emerald-500/10">
+                  Analysis
+                </Badge>
+              )}
+              {model.capabilities.supportsImageGeneration && (
+                <Badge variant="outline" className="text-xs border-amber-500/50 text-amber-300 bg-amber-500/10">
+                  Image Gen
+                </Badge>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Selection Indicator */}
         <AnimatePresence>
