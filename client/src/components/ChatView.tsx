@@ -651,89 +651,93 @@ const FuturisticAIChat: React.FC = () => {
     scrollToBottom();
   }, [messages]);
 
-  // Performance monitoring and contextual tips
+    // Performance monitoring and contextual tips
   useEffect(() => {
-    if (messages.length > 0) {
+    if (messages.length > 4) { // Only after meaningful conversation has started
       const lastMessage = messages[messages.length - 1];
+      const userMessages = messages.filter(m => m.role === 'user');
       
-      // Contextual coding tips
-      if (lastMessage.role === 'user' && lastMessage.content.includes('```')) {
+      // Contextual coding tips - only after multiple code-related messages
+      const codeMessages = userMessages.filter(m => m.content.includes('```'));
+      if (codeMessages.length >= 2 && lastMessage.role === 'user' && lastMessage.content.includes('```')) {
         setTimeout(() => {
           if (selectedLLMModel?.id !== 'gpt-4o' && selectedLLMModel?.id !== 'gpt-4-turbo') {
             showOptimizationTip(
-              "For code analysis, GPT-4 models provide more accurate and detailed responses",
+              "For extensive code analysis, GPT-4 models provide more accurate responses",
               () => {
                 toast.success("Consider switching to GPT-4 for better code assistance!");
               }
             );
           }
-        }, 3000);
-      }
-
-      // High conversation length warning
-      if (messages.length > 20) {
-        setTimeout(() => {
-          showPerformanceAlert(
-            "Long conversation detected. Consider starting a new chat for optimal context and performance",
-            'medium'
-          );
         }, 5000);
       }
 
-      // Expert-level complexity detection
-      const complexTerms = ['algorithm', 'optimization', 'architecture', 'scalability', 'performance'];
-      const hasComplexTerms = complexTerms.some(term => 
-        lastMessage.content.toLowerCase().includes(term)
-      );
+      // High conversation length warning - much higher threshold
+      if (messages.length > 35) {
+        setTimeout(() => {
+          showPerformanceAlert(
+            "Very long conversation detected. Performance may degrade. Consider starting a new chat.",
+            'medium'
+          );
+        }, 8000);
+      }
+
+      // Expert-level complexity detection - only after sustained technical discussion
+      const complexTerms = ['algorithm', 'optimization', 'architecture', 'scalability', 'distributed', 'microservices'];
+      const recentUserMessages = userMessages.slice(-3);
+      const techMessageCount = recentUserMessages.filter(m => 
+        complexTerms.some(term => m.content.toLowerCase().includes(term))
+      ).length;
       
-      if (hasComplexTerms && selectedSystemPreset === 'DEFAULT') {
+      if (techMessageCount >= 2 && selectedSystemPreset === 'DEFAULT' && messages.length > 8) {
         setTimeout(() => {
           showOptimizationTip(
-            "For technical discussions, try the Technical system preset for more detailed responses",
+            "For sustained technical discussions, the Technical system preset provides more detailed responses",
             () => {
               handleSystemPresetChange('TECHNICAL');
               toast.success("Switched to Technical system preset!");
             }
           );
-        }, 4000);
+        }, 6000);
       }
-         }
-   }, [messages, selectedLLMModel, selectedSystemPreset, showOptimizationTip, showPerformanceAlert]);
+    }
+  }, [messages, selectedLLMModel, selectedSystemPreset, showOptimizationTip, showPerformanceAlert]);
 
-   // Periodic performance monitoring
+   // Periodic performance monitoring - much less aggressive
    useEffect(() => {
-     if (!selectedLLMModel) return;
+     if (!selectedLLMModel || messages.length < 10) return;
 
      const checkPerformance = () => {
-       // Alert for conversation getting too long
-       if (messages.length > 30) {
+       // Alert for conversation getting extremely long
+       if (messages.length > 50) {
          showPerformanceAlert(
-           "Very long conversation detected. Performance may degrade. Consider starting a new chat.",
+           "Extremely long conversation detected. Performance may degrade significantly. Consider starting a new chat.",
            'high'
          );
        }
 
-       // Model efficiency tips based on usage patterns
-       const recentUserMessages = messages.filter(m => m.role === 'user').slice(-5);
-       const hasCodeQuestions = recentUserMessages.some(m => 
+       // Model efficiency tips based on sustained usage patterns
+       const recentUserMessages = messages.filter(m => m.role === 'user').slice(-8);
+       const codeQuestions = recentUserMessages.filter(m => 
          m.content.toLowerCase().includes('code') || 
          m.content.toLowerCase().includes('programming') ||
          m.content.includes('```')
        );
 
-       if (hasCodeQuestions && selectedLLMModel.category !== 'code' && selectedLLMModel.id !== 'gpt-4o') {
+       // Only suggest if more than half of recent messages are code-related
+       if (codeQuestions.length >= 4 && selectedLLMModel.category !== 'code' && selectedLLMModel.id !== 'gpt-4o') {
          setTimeout(() => {
            showOptimizationTip(
-             "For coding tasks, consider switching to GPT-4o or a code-specialized model for better performance",
+             "You're doing a lot of coding work. GPT-4o would provide more accurate code assistance",
              () => {
                toast.success("Consider a code-optimized model for programming tasks!");
              }
            );
-         }, 3000);
+         }, 5000);
        }
      };
 
-     const interval = setInterval(checkPerformance, 120000); // Check every 2 minutes
+     const interval = setInterval(checkPerformance, 300000); // Check every 5 minutes instead of 2
      return () => clearInterval(interval);
    }, [messages, selectedLLMModel, showOptimizationTip, showPerformanceAlert]);
 
@@ -811,12 +815,14 @@ const FuturisticAIChat: React.FC = () => {
       const responseTime = Date.now() - startTime;
       const estimatedTokens = userMessage.content.length * 1.3; // Rough estimate
       
-      // Track message sending and analyze conversation
-      setTimeout(() => {
-        if (selectedLLMModel) {
-          analyzeConversation(updatedMessages, selectedLLMModel, responseTime, estimatedTokens);
-        }
-      }, 2000); // Small delay to avoid interrupting user experience
+      // Track message sending and analyze conversation - only after meaningful exchanges
+      if (updatedMessages.length >= 6) { // Wait for at least 3 full exchanges
+        setTimeout(() => {
+          if (selectedLLMModel) {
+            analyzeConversation(updatedMessages, selectedLLMModel, responseTime, estimatedTokens);
+          }
+        }, 5000); // Longer delay to avoid interrupting user experience
+      }
 
     } catch (err) {
       // Track error occurrence
@@ -869,17 +875,23 @@ const FuturisticAIChat: React.FC = () => {
         inputRef.current?.focus();
     }
 
-    // Show feature enhancement tips for advanced commands
+    // Show feature enhancement tips for advanced commands - only for first-time usage
     setTimeout(() => {
-      if (command.prefix === "/analyze" && messages.length < 5) {
-        showOptimizationTip(
-          "Analysis works better with longer conversations. Upload files or ask detailed questions for better insights.",
-          () => {
-            toast.success("Try asking more detailed questions for better analysis!");
-          }
+      if (command.prefix === "/analyze" && messages.length < 8) {
+        const hasUsedAnalyzeBefore = messages.some(m => 
+          m.content.includes('/analyze') || m.content.toLowerCase().includes('analyze')
         );
+        
+        if (!hasUsedAnalyzeBefore) {
+          showOptimizationTip(
+            "Pro tip: Analysis works best with detailed conversations and specific questions",
+            () => {
+              toast.success("Try asking detailed questions for better analysis!");
+            }
+          );
+        }
       }
-    }, 2000);
+    }, 4000);
   };
 
 
@@ -897,16 +909,23 @@ const FuturisticAIChat: React.FC = () => {
     // Track model switching
     trackAction('model_switch');
     
-    // Show optimization tip for model switching based on conversation context
-    if (messages.length > 3) {
-      setTimeout(() => {
-        showOptimizationTip(
-          `${model.name} is optimized for ${model.category} tasks. Your conversation will benefit from this switch.`,
-          () => {
-            toast.success("Model optimization applied!");
-          }
-        );
-      }, 1500);
+    // Show optimization tip for model switching - only for significant switches
+    if (messages.length > 8) {
+      const isSignificantUpgrade = (
+        (model.id === 'gpt-4o' || model.id === 'gpt-4-turbo') &&
+        model.performance > 90
+      );
+      
+      if (isSignificantUpgrade) {
+        setTimeout(() => {
+          showOptimizationTip(
+            `${model.name} will provide more detailed and accurate responses for complex tasks`,
+            () => {
+              toast.success("Model upgrade applied!");
+            }
+          );
+        }, 3000);
+      }
     }
   };
 
