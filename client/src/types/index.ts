@@ -30,16 +30,74 @@ export interface ChatCompletionOptions {
   temperature?: number;
   topP?: number;
   stream?: boolean;
+  // Add support for additional parameters that some models might use
+  frequencyPenalty?: number;
+  presencePenalty?: number;
+  stop?: string | string[];
+  logitBias?: Record<string, number>;
 }
 
-// LLM Model Selection types
+// Model-specific configuration types
+export interface ModelParameterLimits {
+  maxTokens: {
+    input: number;
+    output: number;
+  };
+  temperature: {
+    min: number;
+    max: number;
+    default: number;
+  };
+  topP: {
+    min: number;
+    max: number;
+    default: number;
+  };
+  frequencyPenalty?: {
+    min: number;
+    max: number;
+    default: number;
+  };
+  presencePenalty?: {
+    min: number;
+    max: number;
+    default: number;
+  };
+}
+
 export interface ModelCapabilities {
   supportsVision: boolean;
   supportsCodeGeneration: boolean;
   supportsAnalysis: boolean;
   supportsImageGeneration: boolean;
+  supportsSystemMessages: boolean;
+  supportsJSONMode: boolean;
+  supportsFunctionCalling: boolean;
+  supportsStreaming: boolean;
+  supportsStop: boolean;
+  supportsLogitBias: boolean;
+  supportsFrequencyPenalty: boolean;
+  supportsPresencePenalty: boolean;
 }
 
+export interface ModelConfiguration {
+  id: string;
+  name: string;
+  provider: string;
+  limits: ModelParameterLimits;
+  capabilities: ModelCapabilities;
+  recommendedParams: {
+    maxTokens: number;
+    temperature: number;
+    topP: number;
+    frequencyPenalty?: number;
+    presencePenalty?: number;
+  };
+  specialInstructions?: string[];
+  contextLength: number;
+}
+
+// LLM Model Selection types
 export interface LLMModel {
   id: string;
   name: string;

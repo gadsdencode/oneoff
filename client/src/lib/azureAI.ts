@@ -2,6 +2,7 @@ import ModelClient from "@azure-rest/ai-inference";
 import { AzureKeyCredential } from "@azure/core-auth";
 import { createSseStream } from "@azure/core-sse";
 import { AzureAIMessage, AzureAIConfig, ChatCompletionOptions, LLMModel } from "../types";
+import { getModelConfiguration, validateModelParameters, getOptimizedParameters } from "./modelConfigurations";
 
 export class AzureAIService {
   private client: any; // ModelClient type issue - using any for now
@@ -241,15 +242,55 @@ export class AzureAIService {
     options: ChatCompletionOptions = {}
   ): Promise<string> {
     try {
+      // Get model-specific configuration and parameters
+      const modelConfig = getModelConfiguration(this.config.modelName);
+      
+      // Use validated parameters based on the model's capabilities and limits
+      const validatedParams = validateModelParameters(this.config.modelName, {
+        maxTokens: options.maxTokens,
+        temperature: options.temperature,
+        topP: options.topP,
+        frequencyPenalty: options.frequencyPenalty,
+        presencePenalty: options.presencePenalty
+      });
+
+      // Build request body with only supported parameters
+      const requestBody: any = {
+        messages,
+        max_tokens: validatedParams.maxTokens,
+        temperature: validatedParams.temperature,
+        top_p: validatedParams.topP,
+        model: this.config.modelName,
+        stream: false,
+      };
+
+      // Add optional parameters only if the model supports them
+      if (modelConfig.capabilities.supportsFrequencyPenalty && validatedParams.frequencyPenalty !== undefined) {
+        requestBody.frequency_penalty = validatedParams.frequencyPenalty;
+      }
+      
+      if (modelConfig.capabilities.supportsPresencePenalty && validatedParams.presencePenalty !== undefined) {
+        requestBody.presence_penalty = validatedParams.presencePenalty;
+      }
+
+      if (modelConfig.capabilities.supportsStop && options.stop) {
+        requestBody.stop = options.stop;
+      }
+
+      if (modelConfig.capabilities.supportsLogitBias && options.logitBias) {
+        requestBody.logit_bias = options.logitBias;
+      }
+
+      console.log(`Using optimized parameters for ${modelConfig.name} (${modelConfig.provider}):`, {
+        max_tokens: requestBody.max_tokens,
+        temperature: requestBody.temperature,
+        top_p: requestBody.top_p,
+        ...(requestBody.frequency_penalty !== undefined && { frequency_penalty: requestBody.frequency_penalty }),
+        ...(requestBody.presence_penalty !== undefined && { presence_penalty: requestBody.presence_penalty })
+      });
+
       const response = await this.client.path("/chat/completions").post({
-        body: {
-          messages,
-          max_tokens: options.maxTokens || 2048,
-          temperature: options.temperature || 0.8,
-          top_p: options.topP || 0.1,
-          model: this.config.modelName,
-          stream: false,
-        },
+        body: requestBody,
       });
 
       if (response.status !== "200") {
@@ -274,15 +315,55 @@ export class AzureAIService {
     let reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
     
     try {
+      // Get model-specific configuration and parameters
+      const modelConfig = getModelConfiguration(this.config.modelName);
+      
+      // Use validated parameters based on the model's capabilities and limits
+      const validatedParams = validateModelParameters(this.config.modelName, {
+        maxTokens: options.maxTokens,
+        temperature: options.temperature,
+        topP: options.topP,
+        frequencyPenalty: options.frequencyPenalty,
+        presencePenalty: options.presencePenalty
+      });
+
+      // Build request body with only supported parameters
+      const requestBody: any = {
+        messages,
+        max_tokens: validatedParams.maxTokens,
+        temperature: validatedParams.temperature,
+        top_p: validatedParams.topP,
+        model: this.config.modelName,
+        stream: true,
+      };
+
+      // Add optional parameters only if the model supports them
+      if (modelConfig.capabilities.supportsFrequencyPenalty && validatedParams.frequencyPenalty !== undefined) {
+        requestBody.frequency_penalty = validatedParams.frequencyPenalty;
+      }
+      
+      if (modelConfig.capabilities.supportsPresencePenalty && validatedParams.presencePenalty !== undefined) {
+        requestBody.presence_penalty = validatedParams.presencePenalty;
+      }
+
+      if (modelConfig.capabilities.supportsStop && options.stop) {
+        requestBody.stop = options.stop;
+      }
+
+      if (modelConfig.capabilities.supportsLogitBias && options.logitBias) {
+        requestBody.logit_bias = options.logitBias;
+      }
+
+      console.log(`Using optimized streaming parameters for ${modelConfig.name} (${modelConfig.provider}):`, {
+        max_tokens: requestBody.max_tokens,
+        temperature: requestBody.temperature,
+        top_p: requestBody.top_p,
+        ...(requestBody.frequency_penalty !== undefined && { frequency_penalty: requestBody.frequency_penalty }),
+        ...(requestBody.presence_penalty !== undefined && { presence_penalty: requestBody.presence_penalty })
+      });
+
       const response = await this.client.path("/chat/completions").post({
-        body: {
-          messages,
-          max_tokens: options.maxTokens || 2048,
-          temperature: options.temperature || 0.8,
-          top_p: options.topP || 0.1,
-          model: this.config.modelName,
-          stream: true,
-        },
+        body: requestBody,
       }).asBrowserStream();
 
       if (response.status !== "200") {
