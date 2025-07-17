@@ -343,7 +343,7 @@ const HolographicBubble: React.FC<{
     animate={{ opacity: 1, scale: 1, y: 0 }}
     transition={{ type: "spring", damping: 20, stiffness: 300 }}
     className={`
-      relative p-4 rounded-2xl backdrop-blur-xl border
+      relative p-4 rounded-2xl backdrop-blur-xl border overflow-hidden
       ${isUser 
         ? "bg-gradient-to-br from-violet-500/20 to-purple-600/20 border-violet-400/30 ml-12" 
         : "bg-gradient-to-br from-slate-800/40 to-slate-900/40 border-slate-600/30 mr-12"
