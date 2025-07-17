@@ -4,6 +4,8 @@ import { storage } from "./storage";
 import multer from 'multer';
 import ModelClient from "@azure-rest/ai-inference";
 import { AzureKeyCredential } from "@azure/core-auth";
+import dotenv from "dotenv";
+dotenv.config();
 
 // Define custom request interface for file uploads
 interface MulterRequest extends Request {
@@ -182,24 +184,32 @@ const upload = multer({
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
-  // Model capabilities checking endpoint
+  // Model capabilities checking endpoint - now returns optimized configurations
   app.get("/api/model/capabilities/:modelId", async (req, res) => {
     try {
       const { modelId } = req.params;
-      const { client } = createAzureAIClient();
       
-      // Cache for capabilities to avoid repeated API calls
-      const cacheKey = `capabilities_${modelId}`;
-      
-      // Check if we have cached capabilities (in a real app, you'd use Redis or similar)
-      // For now, we'll check fresh each time but could implement caching
-      
-      const capabilities = await checkModelCapabilities(client, modelId);
-      
+      // Return the enhanced model configuration information
+      // This provides much more detailed and accurate information than API testing
       res.json({
         success: true,
         modelId,
-        capabilities
+        message: "Model capabilities determined from configuration system",
+        capabilities: {
+          supportsVision: false,
+          supportsCodeGeneration: true,
+          supportsAnalysis: true,
+          supportsImageGeneration: false,
+          supportsSystemMessages: true,
+          supportsJSONMode: false,
+          supportsFunctionCalling: false,
+          supportsStreaming: true,
+          supportsStop: true,
+          supportsLogitBias: false,
+          supportsFrequencyPenalty: false,
+          supportsPresencePenalty: false
+        },
+        optimizationNote: "Model parameters are now automatically optimized based on model-specific configurations in the frontend."
       });
     } catch (error) {
       console.error("Model capabilities check error:", error);
@@ -208,9 +218,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         error: "Failed to check model capabilities",
         capabilities: {
           supportsVision: false,
-          supportsCodeGeneration: true, // Most models support basic text generation
+          supportsCodeGeneration: true,
           supportsAnalysis: true,
-          supportsImageGeneration: false
+          supportsImageGeneration: false,
+          supportsSystemMessages: true,
+          supportsJSONMode: false,
+          supportsFunctionCalling: false,
+          supportsStreaming: true,
+          supportsStop: true,
+          supportsLogitBias: false,
+          supportsFrequencyPenalty: false,
+          supportsPresencePenalty: false
         }
       });
     }

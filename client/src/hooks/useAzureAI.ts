@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { AzureAIService } from "../lib/azureAI";
 import { Message, AzureAIMessage, ChatCompletionOptions, LLMModel, ModelCapabilities } from "../types";
+import { getModelConfiguration } from "../lib/modelConfigurations";
 
 // System message presets for different use cases
 export const SYSTEM_MESSAGE_PRESETS = {
@@ -275,33 +276,42 @@ export const useAzureAI = (options: UseAzureAIOptions = {}): UseAzureAIReturn =>
     setError(null);
   }, []);
 
-  // Fetch model capabilities from the server
+  // Fetch model capabilities from the configuration system
   const fetchCapabilities = useCallback(async (modelId: string) => {
     setIsLoadingCapabilities(true);
     try {
-      const response = await fetch(`/api/model/capabilities/${encodeURIComponent(modelId)}`);
-      const data = await response.json();
+      // Get capabilities from our local model configuration system
+      const modelConfig = getModelConfiguration(modelId);
+      setModelCapabilities(modelConfig.capabilities);
       
-      if (data.success) {
-        setModelCapabilities(data.capabilities);
-      } else {
-        console.warn("Failed to fetch model capabilities:", data.error);
-        // Set default capabilities on failure
-        setModelCapabilities({
-          supportsVision: false,
-          supportsCodeGeneration: true,
-          supportsAnalysis: true,
-          supportsImageGeneration: false
-        });
+      // Optionally still check server capabilities as a fallback or validation
+      try {
+        const response = await fetch(`/api/model/capabilities/${encodeURIComponent(modelId)}`);
+        const data = await response.json();
+        
+        if (data.success) {
+          // You could merge server capabilities with local ones here if needed
+          console.log("Server capabilities for", modelId, ":", data.capabilities);
+        }
+      } catch (serverError) {
+        console.warn("Server capability check failed, using local configuration:", serverError);
       }
     } catch (err) {
       console.error("Error fetching model capabilities:", err);
-      // Set default capabilities on error
+      // Set comprehensive default capabilities on error
       setModelCapabilities({
         supportsVision: false,
         supportsCodeGeneration: true,
         supportsAnalysis: true,
-        supportsImageGeneration: false
+        supportsImageGeneration: false,
+        supportsSystemMessages: true,
+        supportsJSONMode: false,
+        supportsFunctionCalling: false,
+        supportsStreaming: true,
+        supportsStop: true,
+        supportsLogitBias: false,
+        supportsFrequencyPenalty: false,
+        supportsPresencePenalty: false
       });
     } finally {
       setIsLoadingCapabilities(false);

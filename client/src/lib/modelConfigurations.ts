@@ -1,0 +1,632 @@
+import { ModelConfiguration } from "../types";
+
+/**
+ * Comprehensive model configurations for Azure AI models
+ * Each model has specific parameter limits and capabilities
+ */
+export const MODEL_CONFIGURATIONS: Record<string, ModelConfiguration> = {
+  // Azure OpenAI Models
+  "gpt-4o": {
+    id: "gpt-4o",
+    name: "GPT-4o",
+    provider: "Azure OpenAI",
+    contextLength: 128000,
+    limits: {
+      maxTokens: {
+        input: 128000,
+        output: 16384
+      },
+      temperature: {
+        min: 0,
+        max: 2,
+        default: 0.7
+      },
+      topP: {
+        min: 0.01,
+        max: 1,
+        default: 0.95
+      },
+      frequencyPenalty: {
+        min: -2,
+        max: 2,
+        default: 0
+      },
+      presencePenalty: {
+        min: -2,
+        max: 2,
+        default: 0
+      }
+    },
+    capabilities: {
+      supportsVision: true,
+      supportsCodeGeneration: true,
+      supportsAnalysis: true,
+      supportsImageGeneration: false,
+      supportsSystemMessages: true,
+      supportsJSONMode: true,
+      supportsFunctionCalling: true,
+      supportsStreaming: true,
+      supportsStop: true,
+      supportsLogitBias: true,
+      supportsFrequencyPenalty: true,
+      supportsPresencePenalty: true
+    },
+    recommendedParams: {
+      maxTokens: 4096,
+      temperature: 0.7,
+      topP: 0.95
+    }
+  },
+
+  "gpt-4o-mini": {
+    id: "gpt-4o-mini",
+    name: "GPT-4o Mini",
+    provider: "Azure OpenAI",
+    contextLength: 128000,
+    limits: {
+      maxTokens: {
+        input: 128000,
+        output: 16384
+      },
+      temperature: {
+        min: 0,
+        max: 2,
+        default: 0.7
+      },
+      topP: {
+        min: 0.01,
+        max: 1,
+        default: 0.95
+      },
+      frequencyPenalty: {
+        min: -2,
+        max: 2,
+        default: 0
+      },
+      presencePenalty: {
+        min: -2,
+        max: 2,
+        default: 0
+      }
+    },
+    capabilities: {
+      supportsVision: false,
+      supportsCodeGeneration: true,
+      supportsAnalysis: true,
+      supportsImageGeneration: false,
+      supportsSystemMessages: true,
+      supportsJSONMode: true,
+      supportsFunctionCalling: true,
+      supportsStreaming: true,
+      supportsStop: true,
+      supportsLogitBias: true,
+      supportsFrequencyPenalty: true,
+      supportsPresencePenalty: true
+    },
+    recommendedParams: {
+      maxTokens: 4096,
+      temperature: 0.7,
+      topP: 0.95
+    }
+  },
+
+  "gpt-4-turbo": {
+    id: "gpt-4-turbo",
+    name: "GPT-4 Turbo",
+    provider: "Azure OpenAI",
+    contextLength: 128000,
+    limits: {
+      maxTokens: {
+        input: 128000,
+        output: 4096
+      },
+      temperature: {
+        min: 0,
+        max: 2,
+        default: 0.7
+      },
+      topP: {
+        min: 0.01,
+        max: 1,
+        default: 0.95
+      },
+      frequencyPenalty: {
+        min: -2,
+        max: 2,
+        default: 0
+      },
+      presencePenalty: {
+        min: -2,
+        max: 2,
+        default: 0
+      }
+    },
+    capabilities: {
+      supportsVision: true,
+      supportsCodeGeneration: true,
+      supportsAnalysis: true,
+      supportsImageGeneration: false,
+      supportsSystemMessages: true,
+      supportsJSONMode: true,
+      supportsFunctionCalling: true,
+      supportsStreaming: true,
+      supportsStop: true,
+      supportsLogitBias: true,
+      supportsFrequencyPenalty: true,
+      supportsPresencePenalty: true
+    },
+    recommendedParams: {
+      maxTokens: 3072,
+      temperature: 0.7,
+      topP: 0.95
+    }
+  },
+
+  "gpt-3.5-turbo": {
+    id: "gpt-3.5-turbo",
+    name: "GPT-3.5 Turbo",
+    provider: "Azure OpenAI",
+    contextLength: 16385,
+    limits: {
+      maxTokens: {
+        input: 16385,
+        output: 4096
+      },
+      temperature: {
+        min: 0,
+        max: 2,
+        default: 0.7
+      },
+      topP: {
+        min: 0.01,
+        max: 1,
+        default: 0.95
+      },
+      frequencyPenalty: {
+        min: -2,
+        max: 2,
+        default: 0
+      },
+      presencePenalty: {
+        min: -2,
+        max: 2,
+        default: 0
+      }
+    },
+    capabilities: {
+      supportsVision: false,
+      supportsCodeGeneration: true,
+      supportsAnalysis: true,
+      supportsImageGeneration: false,
+      supportsSystemMessages: true,
+      supportsJSONMode: true,
+      supportsFunctionCalling: true,
+      supportsStreaming: true,
+      supportsStop: true,
+      supportsLogitBias: true,
+      supportsFrequencyPenalty: true,
+      supportsPresencePenalty: true
+    },
+    recommendedParams: {
+      maxTokens: 2048,
+      temperature: 0.7,
+      topP: 0.95
+    }
+  },
+
+  // Microsoft Models
+  "phi-4": {
+    id: "phi-4",
+    name: "Phi-4",
+    provider: "Microsoft",
+    contextLength: 16384,
+    limits: {
+      maxTokens: {
+        input: 16384,
+        output: 4096
+      },
+      temperature: {
+        min: 0,
+        max: 1,
+        default: 0.6
+      },
+      topP: {
+        min: 0.1,
+        max: 1,
+        default: 0.9
+      }
+    },
+    capabilities: {
+      supportsVision: false,
+      supportsCodeGeneration: true,
+      supportsAnalysis: true,
+      supportsImageGeneration: false,
+      supportsSystemMessages: true,
+      supportsJSONMode: false,
+      supportsFunctionCalling: false,
+      supportsStreaming: true,
+      supportsStop: true,
+      supportsLogitBias: false,
+      supportsFrequencyPenalty: false,
+      supportsPresencePenalty: false
+    },
+    recommendedParams: {
+      maxTokens: 2048,
+      temperature: 0.6,
+      topP: 0.9
+    },
+    specialInstructions: [
+      "Phi models prefer shorter, more concise prompts",
+      "Works best with structured programming tasks"
+    ]
+  },
+
+  // Mistral AI Models
+  "ministral-3b": {
+    id: "ministral-3b",
+    name: "Ministral 3B",
+    provider: "Mistral AI",
+    contextLength: 131072,
+    limits: {
+      maxTokens: {
+        input: 131072,
+        output: 8192
+      },
+      temperature: {
+        min: 0,
+        max: 1,
+        default: 0.7
+      },
+      topP: {
+        min: 0,
+        max: 1,
+        default: 1
+      }
+    },
+    capabilities: {
+      supportsVision: false,
+      supportsCodeGeneration: true,
+      supportsAnalysis: true,
+      supportsImageGeneration: false,
+      supportsSystemMessages: true,
+      supportsJSONMode: false,
+      supportsFunctionCalling: false,
+      supportsStreaming: true,
+      supportsStop: true,
+      supportsLogitBias: false,
+      supportsFrequencyPenalty: false,
+      supportsPresencePenalty: false
+    },
+    recommendedParams: {
+      maxTokens: 4096,
+      temperature: 0.7,
+      topP: 1
+    },
+    specialInstructions: [
+      "Mistral models prefer top_p = 1 for best performance",
+      "Lower temperature for more focused responses"
+    ]
+  },
+
+  "mistral-large-2411": {
+    id: "mistral-large-2411",
+    name: "Mistral Large 2411",
+    provider: "Mistral AI",
+    contextLength: 128000,
+    limits: {
+      maxTokens: {
+        input: 128000,
+        output: 8192
+      },
+      temperature: {
+        min: 0,
+        max: 1,
+        default: 0.7
+      },
+      topP: {
+        min: 0,
+        max: 1,
+        default: 1
+      }
+    },
+    capabilities: {
+      supportsVision: false,
+      supportsCodeGeneration: true,
+      supportsAnalysis: true,
+      supportsImageGeneration: false,
+      supportsSystemMessages: true,
+      supportsJSONMode: true,
+      supportsFunctionCalling: true,
+      supportsStreaming: true,
+      supportsStop: true,
+      supportsLogitBias: false,
+      supportsFrequencyPenalty: false,
+      supportsPresencePenalty: false
+    },
+    recommendedParams: {
+      maxTokens: 4096,
+      temperature: 0.7,
+      topP: 1
+    },
+    specialInstructions: [
+      "Mistral Large supports function calling and JSON mode",
+      "Use top_p = 1 for optimal performance"
+    ]
+  },
+
+  // Meta Llama Models
+  "llama-3.3-70b-instruct": {
+    id: "llama-3.3-70b-instruct",
+    name: "Llama 3.3 70B Instruct",
+    provider: "Meta",
+    contextLength: 128000,
+    limits: {
+      maxTokens: {
+        input: 128000,
+        output: 4096
+      },
+      temperature: {
+        min: 0,
+        max: 2,
+        default: 0.6
+      },
+      topP: {
+        min: 0,
+        max: 1,
+        default: 0.9
+      }
+    },
+    capabilities: {
+      supportsVision: false,
+      supportsCodeGeneration: true,
+      supportsAnalysis: true,
+      supportsImageGeneration: false,
+      supportsSystemMessages: true,
+      supportsJSONMode: false,
+      supportsFunctionCalling: false,
+      supportsStreaming: true,
+      supportsStop: true,
+      supportsLogitBias: false,
+      supportsFrequencyPenalty: false,
+      supportsPresencePenalty: false
+    },
+    recommendedParams: {
+      maxTokens: 3072,
+      temperature: 0.6,
+      topP: 0.9
+    },
+    specialInstructions: [
+      "Llama models perform best with temperature between 0.5-0.8",
+      "Prefers detailed, specific instructions"
+    ]
+  },
+
+  "llama-3.2-11b-vision-instruct": {
+    id: "llama-3.2-11b-vision-instruct",
+    name: "Llama 3.2 11B Vision",
+    provider: "Meta",
+    contextLength: 128000,
+    limits: {
+      maxTokens: {
+        input: 128000,
+        output: 4096
+      },
+      temperature: {
+        min: 0,
+        max: 2,
+        default: 0.6
+      },
+      topP: {
+        min: 0,
+        max: 1,
+        default: 0.9
+      }
+    },
+    capabilities: {
+      supportsVision: true,
+      supportsCodeGeneration: true,
+      supportsAnalysis: true,
+      supportsImageGeneration: false,
+      supportsSystemMessages: true,
+      supportsJSONMode: false,
+      supportsFunctionCalling: false,
+      supportsStreaming: true,
+      supportsStop: true,
+      supportsLogitBias: false,
+      supportsFrequencyPenalty: false,
+      supportsPresencePenalty: false
+    },
+    recommendedParams: {
+      maxTokens: 3072,
+      temperature: 0.6,
+      topP: 0.9
+    },
+    specialInstructions: [
+      "Vision-capable Llama model - can process images",
+      "Best performance with detailed image descriptions"
+    ]
+  },
+
+  // Cohere Models
+  "cohere-command-r-plus": {
+    id: "cohere-command-r-plus",
+    name: "Command R+",
+    provider: "Cohere",
+    contextLength: 131072,
+    limits: {
+      maxTokens: {
+        input: 131072,
+        output: 4096
+      },
+      temperature: {
+        min: 0,
+        max: 1,
+        default: 0.3
+      },
+      topP: {
+        min: 0,
+        max: 1,
+        default: 0.75
+      }
+    },
+    capabilities: {
+      supportsVision: false,
+      supportsCodeGeneration: true,
+      supportsAnalysis: true,
+      supportsImageGeneration: false,
+      supportsSystemMessages: true,
+      supportsJSONMode: false,
+      supportsFunctionCalling: true,
+      supportsStreaming: true,
+      supportsStop: true,
+      supportsLogitBias: false,
+      supportsFrequencyPenalty: false,
+      supportsPresencePenalty: false
+    },
+    recommendedParams: {
+      maxTokens: 3072,
+      temperature: 0.3,
+      topP: 0.75
+    },
+    specialInstructions: [
+      "Cohere models prefer lower temperature (0.1-0.5)",
+      "Excellent for RAG and tool use scenarios",
+      "Works best with clear, structured prompts"
+    ]
+  }
+};
+
+/**
+ * Get model configuration by ID, with fallback to default configuration
+ */
+export function getModelConfiguration(modelId: string): ModelConfiguration {
+  const config = MODEL_CONFIGURATIONS[modelId];
+  
+  if (config) {
+    return config;
+  }
+  
+  // Fallback configuration for unknown models
+  console.warn(`Model configuration not found for: ${modelId}. Using fallback configuration.`);
+  
+  return {
+    id: modelId,
+    name: modelId,
+    provider: "Unknown",
+    contextLength: 16384,
+    limits: {
+      maxTokens: {
+        input: 16384,
+        output: 4096
+      },
+      temperature: {
+        min: 0,
+        max: 1,
+        default: 0.7
+      },
+      topP: {
+        min: 0.1,
+        max: 1,
+        default: 0.9
+      }
+    },
+    capabilities: {
+      supportsVision: false,
+      supportsCodeGeneration: true,
+      supportsAnalysis: true,
+      supportsImageGeneration: false,
+      supportsSystemMessages: true,
+      supportsJSONMode: false,
+      supportsFunctionCalling: false,
+      supportsStreaming: true,
+      supportsStop: true,
+      supportsLogitBias: false,
+      supportsFrequencyPenalty: false,
+      supportsPresencePenalty: false
+    },
+    recommendedParams: {
+      maxTokens: 2048,
+      temperature: 0.7,
+      topP: 0.9
+    },
+    specialInstructions: [
+      "Using fallback configuration - model parameters may not be optimal"
+    ]
+  };
+}
+
+/**
+ * Validate and clamp parameters according to model limits
+ */
+export function validateModelParameters(
+  modelId: string,
+  params: {
+    maxTokens?: number;
+    temperature?: number;
+    topP?: number;
+    frequencyPenalty?: number;
+    presencePenalty?: number;
+  }
+): {
+  maxTokens: number;
+  temperature: number;
+  topP: number;
+  frequencyPenalty?: number;
+  presencePenalty?: number;
+} {
+  const config = getModelConfiguration(modelId);
+  const { limits, capabilities } = config;
+  
+  // Validate and clamp max_tokens
+  let maxTokens = params.maxTokens ?? config.recommendedParams.maxTokens;
+  maxTokens = Math.min(maxTokens, limits.maxTokens.output);
+  maxTokens = Math.max(maxTokens, 1);
+  
+  // Validate and clamp temperature
+  let temperature = params.temperature ?? limits.temperature.default;
+  temperature = Math.min(temperature, limits.temperature.max);
+  temperature = Math.max(temperature, limits.temperature.min);
+  
+  // Validate and clamp top_p
+  let topP = params.topP ?? limits.topP.default;
+  topP = Math.min(topP, limits.topP.max);
+  topP = Math.max(topP, limits.topP.min);
+  
+  const validatedParams: any = {
+    maxTokens,
+    temperature,
+    topP
+  };
+  
+  // Only include frequency_penalty if supported
+  if (capabilities.supportsFrequencyPenalty && limits.frequencyPenalty && params.frequencyPenalty !== undefined) {
+    let frequencyPenalty = params.frequencyPenalty;
+    frequencyPenalty = Math.min(frequencyPenalty, limits.frequencyPenalty.max);
+    frequencyPenalty = Math.max(frequencyPenalty, limits.frequencyPenalty.min);
+    validatedParams.frequencyPenalty = frequencyPenalty;
+  }
+  
+  // Only include presence_penalty if supported
+  if (capabilities.supportsPresencePenalty && limits.presencePenalty && params.presencePenalty !== undefined) {
+    let presencePenalty = params.presencePenalty;
+    presencePenalty = Math.min(presencePenalty, limits.presencePenalty.max);
+    presencePenalty = Math.max(presencePenalty, limits.presencePenalty.min);
+    validatedParams.presencePenalty = presencePenalty;
+  }
+  
+  return validatedParams;
+}
+
+/**
+ * Get optimized parameters for a specific model
+ */
+export function getOptimizedParameters(modelId: string): {
+  maxTokens: number;
+  temperature: number;
+  topP: number;
+  frequencyPenalty?: number;
+  presencePenalty?: number;
+} {
+  const config = getModelConfiguration(modelId);
+  return validateModelParameters(modelId, config.recommendedParams);
+} 

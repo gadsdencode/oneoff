@@ -1,4 +1,6 @@
 import { users, type User, type InsertUser } from "@shared/schema";
+import dotenv from "dotenv";
+dotenv.config();
 
 // modify the interface with any CRUD methods
 // you might need

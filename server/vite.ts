@@ -1,10 +1,12 @@
 import express, { type Express } from "express";
 import fs from "fs";
 import path from "path";
-import { createServer as createViteServer, createLogger } from "vite";
+import { createServer as createViteServer, createLogger, type ServerOptions } from "vite";
 import { type Server } from "http";
 import viteConfig from "../vite.config";
 import { nanoid } from "nanoid";
+import dotenv from "dotenv";
+dotenv.config();
 
 const viteLogger = createLogger();
 
@@ -36,7 +38,7 @@ export async function setupVite(app: Express, server: Server) {
         process.exit(1);
       },
     },
-    server: serverOptions,
+    server: serverOptions as ServerOptions,
     appType: "custom",
   });
 
