@@ -22,8 +22,9 @@ import {
   AlertCircle
 } from "lucide-react";
 import { Message, CommandSuggestion, LLMModel } from "../types";
-import { useAzureAI } from "../hooks/useAzureAI";
+import { useAzureAI, SYSTEM_MESSAGE_PRESETS } from "../hooks/useAzureAI";
 import LLMModalSelector from './LLMModelSelector';
+import { SystemMessageSelector } from './SystemMessageSelector';
 
 interface ParticlesProps {
   className?: string;
@@ -533,8 +534,27 @@ const FuturisticAIChat: React.FC = () => {
   const [showLLMSelector, setShowLLMSelector] = useState(false);
   const [enableStreaming, setEnableStreaming] = useState(true);
   const [streamingResponse, setStreamingResponse] = useState("");
+  const [showSystemMessageModal, setShowSystemMessageModal] = useState(false);
+  const [selectedSystemPreset, setSelectedSystemPreset] = useState<keyof typeof SYSTEM_MESSAGE_PRESETS | "custom">("DEFAULT");
+  const [customSystemMessage, setCustomSystemMessage] = useState<string>("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Get the current system message based on selection
+  const getCurrentSystemMessage = () => {
+    if (selectedSystemPreset === "custom") {
+      return customSystemMessage || SYSTEM_MESSAGE_PRESETS.DEFAULT;
+    }
+    return SYSTEM_MESSAGE_PRESETS[selectedSystemPreset];
+  };
+
+  // Handle system message preset changes
+  const handleSystemPresetChange = (preset: keyof typeof SYSTEM_MESSAGE_PRESETS | "custom", message?: string) => {
+    setSelectedSystemPreset(preset);
+    if (preset === "custom" && message !== undefined) {
+      setCustomSystemMessage(message);
+    }
+  };
 
   // Azure AI hook
   const { 
@@ -548,6 +568,7 @@ const FuturisticAIChat: React.FC = () => {
     selectedLLMModel
   } = useAzureAI({
     enableStreaming,
+    systemMessage: getCurrentSystemMessage(),
     chatOptions: {
       maxTokens: 2048,
       temperature: 0.8,
@@ -897,6 +918,12 @@ const FuturisticAIChat: React.FC = () => {
                   >
                     <Command className="w-5 h-5" />
                   </RippleButton>
+                  <RippleButton
+                    onClick={() => setShowSystemMessageModal(true)}
+                    className="p-2 text-slate-400 hover:text-violet-400 transition-colors"
+                  >
+                    <Brain className="w-5 h-5" />
+                  </RippleButton>
                 </div>
                 
                 <div className="flex-1">
@@ -1035,6 +1062,42 @@ const FuturisticAIChat: React.FC = () => {
               <p>2. Add your Azure AI endpoint and API key</p>
               <p>3. Restart the development server</p>
             </div>
+          </div>
+        </div>
+      </OrigamiModal>
+
+      {/* System Message Modal */}
+      <OrigamiModal
+        isOpen={showSystemMessageModal}
+        onClose={() => setShowSystemMessageModal(false)}
+        title="AI Personality & Style"
+      >
+        <div className="space-y-4">
+          <SystemMessageSelector
+            selectedPreset={selectedSystemPreset}
+            customMessage={customSystemMessage}
+            onPresetChange={handleSystemPresetChange}
+          />
+          {selectedSystemPreset === "custom" && (
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-slate-300">
+                Custom System Message
+              </label>
+              <textarea
+                value={customSystemMessage}
+                onChange={(e) => setCustomSystemMessage(e.target.value)}
+                placeholder="Enter your custom system message..."
+                className="w-full h-32 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-400 resize-none focus:outline-none focus:ring-2 focus:ring-violet-500"
+              />
+            </div>
+          )}
+          <div className="flex justify-end gap-2 pt-4 border-t border-slate-700">
+            <RippleButton
+              onClick={() => setShowSystemMessageModal(false)}
+              className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-white"
+            >
+              Done
+            </RippleButton>
           </div>
         </div>
       </OrigamiModal>
