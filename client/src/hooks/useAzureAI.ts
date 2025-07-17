@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { AzureAIService } from "../lib/azureAI";
-import { Message, AzureAIMessage, ChatCompletionOptions, LLMModel } from "../types";
+import { Message, AzureAIMessage, ChatCompletionOptions, LLMModel, ModelCapabilities } from "../types";
 
 // System message presets for different use cases
 export const SYSTEM_MESSAGE_PRESETS = {
@@ -132,6 +132,9 @@ interface UseAzureAIReturn {
   currentModel: string | null;
   updateModel: (model: LLMModel) => void;
   selectedLLMModel: LLMModel | null;
+  modelCapabilities: ModelCapabilities | null;
+  isLoadingCapabilities: boolean;
+  refreshCapabilities: () => Promise<void>;
 }
 
 const SELECTED_MODEL_KEY = 'azure-ai-selected-model';
@@ -141,6 +144,8 @@ export const useAzureAI = (options: UseAzureAIOptions = {}): UseAzureAIReturn =>
   const [error, setError] = useState<string | null>(null);
   const [currentModel, setCurrentModel] = useState<string | null>(null);
   const [selectedLLMModel, setSelectedLLMModel] = useState<LLMModel | null>(null);
+  const [modelCapabilities, setModelCapabilities] = useState<ModelCapabilities | null>(null);
+  const [isLoadingCapabilities, setIsLoadingCapabilities] = useState(false);
   const aiServiceRef = useRef<AzureAIService | null>(null);
 
   // Load persisted model selection on mount
@@ -270,6 +275,52 @@ export const useAzureAI = (options: UseAzureAIOptions = {}): UseAzureAIReturn =>
     setError(null);
   }, []);
 
+  // Fetch model capabilities from the server
+  const fetchCapabilities = useCallback(async (modelId: string) => {
+    setIsLoadingCapabilities(true);
+    try {
+      const response = await fetch(`/api/model/capabilities/${encodeURIComponent(modelId)}`);
+      const data = await response.json();
+      
+      if (data.success) {
+        setModelCapabilities(data.capabilities);
+      } else {
+        console.warn("Failed to fetch model capabilities:", data.error);
+        // Set default capabilities on failure
+        setModelCapabilities({
+          supportsVision: false,
+          supportsCodeGeneration: true,
+          supportsAnalysis: true,
+          supportsImageGeneration: false
+        });
+      }
+    } catch (err) {
+      console.error("Error fetching model capabilities:", err);
+      // Set default capabilities on error
+      setModelCapabilities({
+        supportsVision: false,
+        supportsCodeGeneration: true,
+        supportsAnalysis: true,
+        supportsImageGeneration: false
+      });
+    } finally {
+      setIsLoadingCapabilities(false);
+    }
+  }, []);
+
+  const refreshCapabilities = useCallback(async () => {
+    if (currentModel) {
+      await fetchCapabilities(currentModel);
+    }
+  }, [currentModel, fetchCapabilities]);
+
+  // Fetch capabilities when model changes
+  useEffect(() => {
+    if (currentModel) {
+      fetchCapabilities(currentModel);
+    }
+  }, [currentModel, fetchCapabilities]);
+
   return {
     sendMessage,
     sendStreamingMessage,
@@ -278,6 +329,9 @@ export const useAzureAI = (options: UseAzureAIOptions = {}): UseAzureAIReturn =>
     clearError,
     currentModel,
     updateModel,
-    selectedLLMModel
+    selectedLLMModel,
+    modelCapabilities,
+    isLoadingCapabilities,
+    refreshCapabilities
   };
 }; 

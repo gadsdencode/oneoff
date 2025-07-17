@@ -21,7 +21,7 @@ import {
   CircuitBoard,
   AlertCircle
 } from "lucide-react";
-import { Message, CommandSuggestion, LLMModel } from "../types";
+import { Message, CommandSuggestion, LLMModel, ModelCapabilities } from "../types";
 import { useAzureAI, SYSTEM_MESSAGE_PRESETS } from "../hooks/useAzureAI";
 import LLMModalSelector from './LLMModelSelector';
 import { SystemMessageSelector } from './SystemMessageSelector';
@@ -294,22 +294,22 @@ const Particles: React.FC<ParticlesProps> = ({
   );
 };
 
-// Helper function to check if a command is available for the current model
-const isCommandAvailable = (command: string, model: LLMModel | null): boolean => {
-  if (!model || !model.capabilities) {
-    // Default to available if no capability info (for backward compatibility)
-    return true;
+// Helper function to check if a command is available based on dynamic capabilities
+const isCommandAvailable = (command: string, capabilities: ModelCapabilities | null): boolean => {
+  if (!capabilities) {
+    // Default to unavailable if no capability info (loading or error state)
+    return false;
   }
 
   switch (command) {
     case "/clone":
-      return model.capabilities.supportsVision === true;
+      return capabilities.supportsVision === true;
     case "/page":
-      return model.capabilities.supportsCodeGeneration === true;
+      return capabilities.supportsCodeGeneration === true;
     case "/improve":
-      return model.capabilities.supportsCodeGeneration === true;
+      return capabilities.supportsCodeGeneration === true;
     case "/analyze":
-      return model.capabilities.supportsAnalysis === true;
+      return capabilities.supportsAnalysis === true;
     default:
       return true;
   }
@@ -597,7 +597,10 @@ const FuturisticAIChat: React.FC = () => {
     clearError,
     currentModel,
     updateModel,
-    selectedLLMModel
+    selectedLLMModel,
+    modelCapabilities,
+    isLoadingCapabilities,
+    refreshCapabilities
   } = useAzureAI({
     enableStreaming,
     systemMessage: getCurrentSystemMessage(),
@@ -881,33 +884,49 @@ const FuturisticAIChat: React.FC = () => {
                 >
                   <div className="grid grid-cols-2 gap-2">
                     {commandSuggestions.map((command) => {
-                      const isAvailable = isCommandAvailable(command.prefix, selectedLLMModel);
+                      const isAvailable = isCommandAvailable(command.prefix, modelCapabilities);
+                      const isLoading = isLoadingCapabilities;
                       const buttonContent = (
                         <RippleButton
                           key={command.prefix}
-                          onClick={() => isAvailable && selectCommand(command)}
-                          disabled={!isAvailable}
+                          onClick={() => isAvailable && !isLoading && selectCommand(command)}
+                          disabled={!isAvailable || isLoading}
                           className={`flex items-center gap-3 p-3 rounded-lg border text-left transition-all duration-200 ${
-                            isAvailable
+                            isAvailable && !isLoading
                               ? "bg-slate-800/50 hover:bg-slate-700/50 border-slate-700/30 cursor-pointer"
                               : "bg-slate-900/30 border-slate-800/30 cursor-not-allowed opacity-50"
                           }`}
                         >
-                          <div className={`${isAvailable ? "text-violet-400" : "text-slate-500"}`}>
-                            {command.icon}
+                          <div className={`${isAvailable && !isLoading ? "text-violet-400" : "text-slate-500"}`}>
+                            {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : command.icon}
                           </div>
                           <div>
-                            <div className={`text-sm font-medium ${isAvailable ? "text-white" : "text-slate-500"}`}>
+                            <div className={`text-sm font-medium ${isAvailable && !isLoading ? "text-white" : "text-slate-500"}`}>
                               {command.label}
                             </div>
-                            <div className={`text-xs ${isAvailable ? "text-slate-400" : "text-slate-600"}`}>
-                              {isAvailable ? command.description : "Not available with current model"}
+                            <div className={`text-xs ${isAvailable && !isLoading ? "text-slate-400" : "text-slate-600"}`}>
+                              {isLoading 
+                                ? "Checking capabilities..." 
+                                : isAvailable 
+                                  ? command.description 
+                                  : "Not available with current model"
+                              }
                             </div>
                           </div>
                         </RippleButton>
                       );
 
-                      if (!isAvailable) {
+                      if (!isAvailable && !isLoading) {
+                        const getRequiredCapability = (prefix: string) => {
+                          switch (prefix) {
+                            case "/clone": return "vision";
+                            case "/page": return "code generation";
+                            case "/improve": return "code generation";
+                            case "/analyze": return "analysis";
+                            default: return "unknown";
+                          }
+                        };
+
                         return (
                           <TooltipProvider key={command.prefix}>
                             <Tooltip>
@@ -916,9 +935,11 @@ const FuturisticAIChat: React.FC = () => {
                               </TooltipTrigger>
                               <TooltipContent side="top" className="bg-slate-800 border-slate-700">
                                 <p className="text-sm">
-                                  This feature requires a model with {command.prefix === "/clone" ? "vision" : "code generation"} capabilities.
+                                  This feature requires {getRequiredCapability(command.prefix)} capabilities.
                                   <br />
-                                  Try switching to GPT-4o or Llama 3.2 Vision for full functionality.
+                                  Current model: <span className="font-medium">{selectedLLMModel?.name || currentModel}</span>
+                                  <br />
+                                  Try switching to a model with {getRequiredCapability(command.prefix)} support.
                                 </p>
                               </TooltipContent>
                             </Tooltip>
