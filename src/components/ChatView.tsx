@@ -703,7 +703,7 @@ const FuturisticAIChat: React.FC = () => {
                 <h1 className="text-xl font-bold bg-gradient-to-r from-violet-400 to-purple-400 bg-clip-text text-transparent">
                   NomadAI
                 </h1>
-                <p className="text-xs text-slate-400">Unified UI</p>
+                <p className="text-xs text-slate-400">The UI for AI</p>
               </div>
             </div>
             
