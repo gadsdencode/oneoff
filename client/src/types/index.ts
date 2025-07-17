@@ -31,3 +31,18 @@ export interface ChatCompletionOptions {
   topP?: number;
   stream?: boolean;
 }
+
+// LLM Model Selection types
+export interface LLMModel {
+  id: string;
+  name: string;
+  provider: string;
+  performance: number;
+  cost: number;
+  latency: number;
+  contextLength: number;
+  description: string;
+  category: "text" | "code" | "multimodal" | "reasoning";
+  tier: "free" | "pro" | "enterprise";
+  isFavorite: boolean;
+}
