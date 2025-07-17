@@ -2,9 +2,35 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { AzureAIService } from "../lib/azureAI";
 import { Message, AzureAIMessage, ChatCompletionOptions, LLMModel } from "../types";
 
+// System message presets for different use cases
+export const SYSTEM_MESSAGE_PRESETS = {
+  DEFAULT: "You are a helpful AI assistant. Provide clear, concise, and accurate responses.",
+  PROFESSIONAL: `You are a professional business assistant.
+- Use formal, clear language
+- Provide structured responses
+- Always maintain a helpful and respectful tone
+- When uncertain, acknowledge limitations and suggest alternatives`,
+  CREATIVE: `You are a creative writing assistant with expertise in storytelling.
+- Use engaging, descriptive language
+- Encourage creativity while providing constructive feedback
+- Adapt your tone to match the user's writing style
+- Provide specific examples when giving suggestions`,
+  TECHNICAL: `You are a technical documentation specialist.
+- Use precise, clear technical language
+- Structure responses with headings and bullet points
+- Include code examples when relevant
+- Explain complex concepts in accessible terms`,
+  CASUAL: `You are a friendly, casual AI assistant.
+- Use conversational, approachable language
+- Be enthusiastic and supportive
+- Use examples and analogies to explain concepts
+- Keep responses engaging and easy to understand`
+} as const;
+
 interface UseAzureAIOptions {
   enableStreaming?: boolean;
   chatOptions?: ChatCompletionOptions;
+  systemMessage?: string;
 }
 
 interface UseAzureAIReturn {
@@ -87,11 +113,13 @@ export const useAzureAI = (options: UseAzureAIOptions = {}): UseAzureAIReturn =>
 
   // Convert app messages to Azure AI format
   const convertToAzureAIMessages = useCallback((messages: Message[]): AzureAIMessage[] => {
+    const systemContent = options.systemMessage || SYSTEM_MESSAGE_PRESETS.DEFAULT;
+      
     // Add system message
     const azureMessages: AzureAIMessage[] = [
       {
         role: "system",
-        content: "You are a helpful AI assistant. Provide clear, concise, and accurate responses."
+        content: systemContent
       }
     ];
 
@@ -106,7 +134,7 @@ export const useAzureAI = (options: UseAzureAIOptions = {}): UseAzureAIReturn =>
     });
 
     return azureMessages;
-  }, []);
+  }, [options.systemMessage]);
 
   // Send non-streaming message
   const sendMessage = useCallback(async (messages: Message[]): Promise<string> => {
