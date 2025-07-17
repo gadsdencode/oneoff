@@ -4,7 +4,6 @@ import React, { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Send,
-  Paperclip,
   Command,
   Sparkles,
   ImageIcon,
@@ -733,10 +732,7 @@ const FuturisticAIChat: React.FC = () => {
     }
   };
 
-  const addAttachment = () => {
-    const fileName = `document-${Date.now()}.pdf`;
-    setAttachments(prev => [...prev, fileName]);
-  };
+
 
   const removeAttachment = (index: number) => {
     setAttachments(prev => prev.filter((_, i) => i !== index));
@@ -1012,12 +1008,6 @@ const FuturisticAIChat: React.FC = () => {
             <div className="relative">
               <div className="flex items-end gap-4 p-4 bg-slate-900/50 backdrop-blur-xl rounded-2xl border border-slate-700/50">
                 <div className="flex gap-2">
-                  <RippleButton
-                    onClick={addAttachment}
-                    className="p-2 text-slate-400 hover:text-violet-400 transition-colors"
-                  >
-                    <Paperclip className="w-5 h-5" />
-                  </RippleButton>
                   <RippleButton
                     onClick={() => setShowCommands(!showCommands)}
                     className="p-2 text-slate-400 hover:text-violet-400 transition-colors"
