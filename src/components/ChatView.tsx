@@ -18,9 +18,11 @@ import {
   Zap,
   Brain,
   Cpu,
-  CircuitBoard
+  CircuitBoard,
+  AlertCircle
 } from "lucide-react";
 import { Message, CommandSuggestion } from "../types";
+import { useAzureAI } from "../hooks/useAzureAI";
 
 interface ParticlesProps {
   className?: string;
@@ -515,7 +517,7 @@ const FuturisticAIChat: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
-      content: "Hello! I'm your AI assistant. How can I help you create something amazing today?",
+      content: "Hello! I'm your AI assistant powered by Azure AI. How can I help you create something amazing today?",
       role: "assistant",
       timestamp: new Date(),
     }
@@ -527,8 +529,20 @@ const FuturisticAIChat: React.FC = () => {
   const [activeMessage, setActiveMessage] = useState<string | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [enableStreaming, setEnableStreaming] = useState(true);
+  const [streamingResponse, setStreamingResponse] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Azure AI hook
+  const { sendMessage, sendStreamingMessage, isLoading, error, clearError } = useAzureAI({
+    enableStreaming,
+    chatOptions: {
+      maxTokens: 2048,
+      temperature: 0.8,
+      topP: 0.1
+    }
+  });
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -548,6 +562,7 @@ const FuturisticAIChat: React.FC = () => {
 
   const handleSend = async () => {
     if (!input.trim() && attachments.length === 0) return;
+    if (isLoading) return; // Prevent multiple requests
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -557,24 +572,67 @@ const FuturisticAIChat: React.FC = () => {
       attachments: attachments.length > 0 ? [...attachments] : undefined,
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
     setInput("");
     setAttachments([]);
     setIsTyping(true);
     setActiveMessage(userMessage.id);
+    clearError(); // Clear any previous errors
 
-    // Simulate AI response
-    setTimeout(() => {
-      const aiMessage: Message = {
+    try {
+      if (enableStreaming) {
+        // Handle streaming response
+        const aiMessageId = (Date.now() + 1).toString();
+        const aiMessage: Message = {
+          id: aiMessageId,
+          content: "",
+          role: "assistant",
+          timestamp: new Date(),
+        };
+        
+        setMessages(prev => [...prev, aiMessage]);
+        setStreamingResponse("");
+
+        await sendStreamingMessage(updatedMessages, (chunk: string) => {
+          setStreamingResponse(prev => {
+            const newContent = prev + chunk;
+            setMessages(prevMessages => 
+              prevMessages.map(msg => 
+                msg.id === aiMessageId 
+                  ? { ...msg, content: newContent }
+                  : msg
+              )
+            );
+            return newContent;
+          });
+        });
+
+        setStreamingResponse("");
+      } else {
+        // Handle non-streaming response
+        const response = await sendMessage(updatedMessages);
+        const aiMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          content: response,
+          role: "assistant",
+          timestamp: new Date(),
+        };
+        setMessages(prev => [...prev, aiMessage]);
+      }
+    } catch (err) {
+      // Error handling - show error message in chat
+      const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: "I understand your request. Let me help you with that. This is a sophisticated AI response with advanced capabilities.",
+        content: `Sorry, I encountered an error: ${err instanceof Error ? err.message : 'Unknown error'}. Please check your Azure AI configuration and try again.`,
         role: "assistant",
         timestamp: new Date(),
       };
-      setMessages(prev => [...prev, aiMessage]);
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
       setIsTyping(false);
       setActiveMessage(null);
-    }, 2000);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -784,6 +842,29 @@ const FuturisticAIChat: React.FC = () => {
               )}
             </AnimatePresence>
 
+            {/* Error Display */}
+            {error && (
+              <motion.div
+                className="mb-4 p-4 bg-red-900/20 backdrop-blur-xl rounded-xl border border-red-500/30"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+              >
+                <div className="flex items-center gap-3">
+                  <AlertCircle className="w-5 h-5 text-red-400" />
+                  <div className="flex-1">
+                    <p className="text-sm text-red-200">{error}</p>
+                  </div>
+                  <RippleButton
+                    onClick={clearError}
+                    className="p-1 text-red-400 hover:text-red-200"
+                  >
+                    <X className="w-4 h-4" />
+                  </RippleButton>
+                </div>
+              </motion.div>
+            )}
+
             {/* Input */}
             <div className="relative">
               <div className="flex items-end gap-4 p-4 bg-slate-900/50 backdrop-blur-xl rounded-2xl border border-slate-700/50">
@@ -811,15 +892,16 @@ const FuturisticAIChat: React.FC = () => {
                     placeholder="Type your message or use / for commands..."
                     className="w-full bg-transparent text-white placeholder-slate-400 resize-none focus:outline-none min-h-[40px] max-h-32"
                     rows={1}
+                    disabled={isLoading}
                   />
                 </div>
                 
                 <RippleButton
                   onClick={handleSend}
-                  disabled={!input.trim() && attachments.length === 0}
+                  disabled={(!input.trim() && attachments.length === 0) || isLoading}
                   className="p-3 bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 rounded-xl transition-all duration-200"
                 >
-                  {isTyping ? (
+                  {isLoading ? (
                     <Loader2 className="w-5 h-5 animate-spin" />
                   ) : (
                     <Send className="w-5 h-5" />
@@ -858,34 +940,68 @@ const FuturisticAIChat: React.FC = () => {
       <OrigamiModal
         isOpen={showEditModal}
         onClose={() => setShowEditModal(false)}
-        title="Edit Settings"
+        title="Azure AI Settings"
       >
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-slate-300 mb-2">
-              AI Model
+              Streaming Mode
             </label>
-                         <select 
-               aria-label="AI Model selection"
-               className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
-             >
-               <option>Neural GPT-4</option>
-               <option>Creative AI</option>
-               <option>Code Assistant</option>
-             </select>
+            <div className="flex items-center gap-3">
+              <RippleButton
+                onClick={() => setEnableStreaming(!enableStreaming)}
+                className={`p-2 rounded-lg transition-colors ${
+                  enableStreaming 
+                    ? "bg-violet-600 text-white" 
+                    : "bg-slate-800 text-slate-400"
+                }`}
+              >
+                {enableStreaming ? "Enabled" : "Disabled"}
+              </RippleButton>
+              <span className="text-sm text-slate-400">
+                {enableStreaming ? "Real-time responses" : "Wait for complete response"}
+              </span>
+            </div>
           </div>
+          
           <div>
             <label className="block text-sm font-medium text-slate-300 mb-2">
-              Response Style
+              Azure AI Status
             </label>
-                         <select 
-               aria-label="Response Style selection"
-               className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
-             >
-               <option>Balanced</option>
-               <option>Creative</option>
-               <option>Precise</option>
-             </select>
+            <div className="flex items-center gap-2">
+              <div className={`w-2 h-2 rounded-full ${error ? "bg-red-500" : "bg-green-500"}`} />
+              <span className="text-sm text-slate-300">
+                {error ? "Configuration Error" : "Connected"}
+              </span>
+            </div>
+            {error && (
+              <p className="text-xs text-red-400 mt-1">
+                Check your .env file for proper Azure AI configuration
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">
+              Model Information
+            </label>
+            <div className="p-3 bg-slate-800 rounded-lg">
+              <p className="text-sm text-slate-300">Model: {import.meta.env.VITE_AZURE_AI_MODEL_NAME || "Ministral-3B"}</p>
+              <p className="text-xs text-slate-400 mt-1">
+                Endpoint: {import.meta.env.VITE_AZURE_AI_ENDPOINT ? "Configured" : "Not configured"}
+              </p>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">
+              Configuration Help
+            </label>
+            <div className="text-xs text-slate-400 space-y-1">
+              <p>1. Copy env.template to .env</p>
+              <p>2. Add your Azure AI endpoint and API key</p>
+              <p>3. Restart the development server</p>
+            </div>
           </div>
         </div>
       </OrigamiModal>

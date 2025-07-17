@@ -12,3 +12,22 @@ export interface CommandSuggestion {
   description: string;
   prefix: string;
 }
+
+// Azure AI specific types
+export interface AzureAIMessage {
+  role: "system" | "user" | "assistant";
+  content: string;
+}
+
+export interface AzureAIConfig {
+  endpoint: string;
+  apiKey: string;
+  modelName: string;
+}
+
+export interface ChatCompletionOptions {
+  maxTokens?: number;
+  temperature?: number;
+  topP?: number;
+  stream?: boolean;
+}
