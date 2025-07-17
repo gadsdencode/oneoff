@@ -701,9 +701,9 @@ const FuturisticAIChat: React.FC = () => {
               </div>
               <div>
                 <h1 className="text-xl font-bold bg-gradient-to-r from-violet-400 to-purple-400 bg-clip-text text-transparent">
-                  Neural AI
+                  NomadAI
                 </h1>
-                <p className="text-xs text-slate-400">Advanced Intelligence System</p>
+                <p className="text-xs text-slate-400">Unified UI</p>
               </div>
             </div>
             
