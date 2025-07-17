@@ -17,6 +17,29 @@ interface AzureAIConfig {
   modelName: string;
 }
 
+// Helper function to extract error details from Azure AI response
+function extractAzureAIError(error: any): string {
+  if (typeof error === 'string') {
+    return error;
+  }
+  
+  if (error && typeof error === 'object') {
+    // Try to extract error message from common error structures
+    if (error.message) return error.message;
+    if (error.error && error.error.message) return error.error.message;
+    if (error.code && error.message) return `${error.code}: ${error.message}`;
+    
+    // If it's an object without clear structure, stringify it
+    try {
+      return JSON.stringify(error);
+    } catch {
+      return 'Unknown error object';
+    }
+  }
+  
+  return 'Unknown error';
+}
+
 // Initialize Azure AI client
 function createAzureAIClient(): { client: any; config: AzureAIConfig } {
   const endpoint = process.env.VITE_AZURE_AI_ENDPOINT;
@@ -111,7 +134,8 @@ Please respond in JSON format with this structure:
       });
 
       if (response.status !== "200") {
-        throw new Error(`Azure AI API error: ${response.body?.error || 'Unknown error'}`);
+        const errorDetail = extractAzureAIError(response.body?.error || response.body);
+        throw new Error(`Azure AI API error (${response.status}): ${errorDetail}`);
       }
 
       const aiResponse = response.body.choices[0]?.message?.content || "";
@@ -147,7 +171,19 @@ Please respond in JSON format with this structure:
       });
     } catch (error) {
       console.error("Clone UI analysis error:", error);
-      res.status(500).json({ error: "Failed to analyze image with Azure AI" });
+      
+      // Provide more detailed error information while keeping it safe for client
+      let errorMessage = "Failed to analyze image with Azure AI";
+      if (error instanceof Error) {
+        errorMessage = error.message.includes('Azure AI API error') 
+          ? error.message 
+          : `Analysis failed: ${error.message}`;
+      }
+      
+      res.status(500).json({ 
+        error: errorMessage,
+        details: "Please check that your image is a valid UI/web design screenshot"
+      });
     }
   });
 
@@ -298,7 +334,8 @@ Please provide ONLY the code, no explanations or markdown formatting.`;
     });
 
     if (response.status !== "200") {
-      throw new Error(`Azure AI API error: ${response.body?.error || 'Unknown error'}`);
+      const errorDetail = extractAzureAIError(response.body?.error || response.body);
+      throw new Error(`Azure AI API error (${response.status}): ${errorDetail}`);
     }
 
     return response.body.choices[0]?.message?.content || generateFallbackUICode(analysis);
