@@ -42,6 +42,74 @@ function extractAzureAIError(error: any): string {
   return 'Unknown error';
 }
 
+// Robust JSON parser for Azure AI responses
+function parseAzureAIJSON(response: string): any {
+  try {
+    // First, try direct parsing
+    try {
+      return JSON.parse(response);
+    } catch (directError) {
+      // If direct parsing fails, try to extract and clean JSON
+    }
+
+    // Try to find JSON in the response using multiple patterns
+    const jsonPatterns = [
+      /\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/,  // Simple nested objects
+      /\{[\s\S]*\}/,                      // Any content between braces
+      /```json\s*(\{[\s\S]*?\})\s*```/,   // Markdown JSON blocks
+      /```\s*(\{[\s\S]*?\})\s*```/        // Generic code blocks
+    ];
+
+    for (const pattern of jsonPatterns) {
+      const match = response.match(pattern);
+      if (match) {
+        try {
+          let jsonStr = match[1] || match[0];
+          
+          // Sanitize the JSON string
+          jsonStr = sanitizeJSONString(jsonStr);
+          
+          const parsed = JSON.parse(jsonStr);
+          if (parsed && typeof parsed === 'object') {
+            return parsed;
+          }
+        } catch (parseError) {
+          console.warn('Failed to parse JSON pattern match:', parseError);
+          continue;
+        }
+      }
+    }
+
+    console.warn('No valid JSON found in Azure AI response');
+    return null;
+  } catch (error) {
+    console.error('JSON parsing completely failed:', error);
+    return null;
+  }
+}
+
+// Sanitize JSON string to fix common issues
+function sanitizeJSONString(jsonStr: string): string {
+  return jsonStr
+    .trim()
+    // Fix unquoted property names
+    .replace(/(\w+):/g, '"$1":')
+    // Fix single quotes
+    .replace(/'/g, '"')
+    // Fix trailing commas
+    .replace(/,(\s*[}\]])/g, '$1')
+    // Fix missing quotes around string values (but not numbers/booleans)
+    .replace(/:\s*([a-zA-Z][a-zA-Z0-9_\-]*)\s*([,}\]])/g, (match, value, suffix) => {
+      // Don't quote boolean values
+      if (value === 'true' || value === 'false' || value === 'null') {
+        return `: ${value}${suffix}`;
+      }
+      return `: "${value}"${suffix}`;
+    })
+    // Fix number values that were incorrectly quoted
+    .replace(/:\s*"(\d+(?:\.\d+)?)"/g, ': $1');
+}
+
 // Function to check actual model capabilities by testing API calls
 async function checkModelCapabilities(client: any, modelId: string): Promise<{
   supportsVision: boolean;
@@ -296,26 +364,13 @@ Please respond in JSON format with this structure:
 
       const aiResponse = response.body.choices[0]?.message?.content || "";
       
-      // Parse AI response
-      let analysisResult;
-      try {
-        // Extract JSON from AI response (in case it has extra text)
-        const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
-        analysisResult = jsonMatch ? JSON.parse(jsonMatch[0]) : {
-          components: [{ type: "component", description: "Unable to analyze components" }],
-          colorPalette: ["#000000", "#ffffff"],
-          layout: "standard layout",
-          estimatedComplexity: "medium"
-        };
-      } catch (parseError) {
-        console.error("Failed to parse AI response:", parseError);
-        analysisResult = {
-          components: [{ type: "component", description: "Unable to analyze components" }],
-          colorPalette: ["#000000", "#ffffff"],
-          layout: "standard layout",
-          estimatedComplexity: "medium"
-        };
-      }
+      // Parse AI response with robust JSON parsing
+      const analysisResult = parseAzureAIJSON(aiResponse) || {
+        components: [{ type: "component", description: "Unable to analyze components" }],
+        colorPalette: ["#000000", "#ffffff"],
+        layout: "standard layout",
+        estimatedComplexity: "medium"
+      };
 
       // Generate code based on AI analysis
       const generatedCode = await generateUICodeWithAI(client, config, analysisResult);
@@ -595,13 +650,8 @@ Consider modern web design principles and the specified style theme.`;
 
     const aiResponse = response.body.choices[0]?.message?.content || "";
     
-    try {
-      const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
-      return jsonMatch ? JSON.parse(jsonMatch[0]) : generateFallbackPageStructure(template, style);
-    } catch (parseError) {
-      console.error("Failed to parse page structure:", parseError);
-      return generateFallbackPageStructure(template, style);
-    }
+    const parsed = parseAzureAIJSON(aiResponse);
+    return parsed || generateFallbackPageStructure(template, style);
   } catch (error) {
     console.error("AI page generation error:", error);
     return generateFallbackPageStructure(template, style);
@@ -830,13 +880,9 @@ Provide realistic performance metrics and actionable optimization suggestions fo
 
     const aiResponse = response.body.choices[0]?.message?.content || "";
     
-    try {
-      const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        return JSON.parse(jsonMatch[0]);
-      }
-    } catch (parseError) {
-      console.error("Failed to parse performance analysis:", parseError);
+    const parsed = parseAzureAIJSON(aiResponse);
+    if (parsed) {
+      return parsed;
     }
 
     // Fallback
@@ -912,13 +958,9 @@ And anti-patterns like:
 
     const aiResponse = response.body.choices[0]?.message?.content || "";
     
-    try {
-      const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        return JSON.parse(jsonMatch[0]);
-      }
-    } catch (parseError) {
-      console.error("Failed to parse pattern analysis:", parseError);
+    const parsed = parseAzureAIJSON(aiResponse);
+    if (parsed) {
+      return parsed;
     }
 
     // Fallback
@@ -1020,18 +1062,13 @@ Focus on:
 
     const aiResponse = response.body.choices[0]?.message?.content || "";
     
-    try {
-      const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const result = JSON.parse(jsonMatch[0]);
+          const parsed = parseAzureAIJSON(aiResponse);
+      if (parsed) {
         return {
-          improvements: result.improvements || [],
-          optimizedCode: result.optimizedCode || code
+          improvements: parsed.improvements || [],
+          optimizedCode: parsed.optimizedCode || code
         };
       }
-    } catch (parseError) {
-      console.error("Failed to parse code analysis:", parseError);
-    }
 
     // Fallback if parsing fails
     return generateFallbackCodeAnalysis(code);
