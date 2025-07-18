@@ -817,14 +817,30 @@ const FuturisticAIChat: React.FC = () => {
       const responseTime = Date.now() - startTime;
       const estimatedTokens = userMessage.content.length * 1.3; // Rough estimate
       
+      console.log(`📊 Message sent. Total messages: ${updatedMessages.length}, Response time: ${responseTime}ms, Estimated tokens: ${estimatedTokens}`);
+      
       // Track message sending and analyze conversation - reduced threshold for earlier analysis
-      if (updatedMessages.length >= 4) { // Reduced from 6 to 4 (2 full exchanges)
+      if (updatedMessages.length >= 2) { // Temporarily reduced to 2 for immediate testing
+        console.log(`🚀 Triggering conversation analysis for ${updatedMessages.length} messages...`);
+        console.log(`🔧 AI Service available: ${!!aiServiceRef.current}`);
+        console.log(`🔧 Selected LLM Model: ${selectedLLMModel?.name || 'none'}`);
+        
         setTimeout(() => {
           if (selectedLLMModel) {
-            console.log('🚀 Triggering conversation analysis...');
-            analyzeConversation(updatedMessages, selectedLLMModel, responseTime, estimatedTokens);
+            console.log('📞 Calling analyzeConversation...');
+            analyzeConversation(updatedMessages, selectedLLMModel, responseTime, estimatedTokens)
+              .then(() => {
+                console.log('✅ analyzeConversation completed successfully');
+              })
+              .catch((error) => {
+                console.error('❌ analyzeConversation failed:', error);
+              });
+          } else {
+            console.warn('⚠️ No selectedLLMModel available for analysis');
           }
         }, 2000); // Reduced delay from 5000 to 2000 for quicker feedback
+      } else {
+        console.log(`⏳ Not enough messages for analysis yet (${updatedMessages.length}/2)`);
       }
 
     } catch (err) {
@@ -1209,19 +1225,51 @@ const FuturisticAIChat: React.FC = () => {
                   >
                     <Brain className="w-5 h-5" />
                   </RippleButton>
-                  {/* Temporary test button for intelligent toasts */}
+                  {/* Enhanced test button for intelligent toasts and Azure AI */}
                   <RippleButton
-                    onClick={() => {
+                    onClick={async () => {
+                      // Test basic toast
                       toast("🧪 Test Notification", {
                         description: "This confirms the toast system is working correctly",
                         duration: 4000
                       });
                       
+                      // Test Azure AI service directly
+                      setTimeout(async () => {
+                        try {
+                          if (aiServiceRef.current) {
+                            console.log('🔬 Testing Azure AI service directly...');
+                            const testResponse = await aiServiceRef.current.sendChatCompletion([
+                              {
+                                role: "system",
+                                content: "You are a helpful assistant."
+                              },
+                              {
+                                role: "user", 
+                                content: "Say 'Hello World' to test the connection."
+                              }
+                            ], { 
+                              maxTokens: 20, 
+                              temperature: 0
+                              // topP will be automatically set to 1 by parameter validation
+                            });
+                            
+                            toast.success("Azure AI Test Passed: " + testResponse);
+                          } else {
+                            toast.error("Azure AI service not initialized");
+                          }
+                        } catch (error) {
+                          console.error('🔬 Azure AI test failed:', error);
+                          toast.error("Azure AI test failed: " + (error as Error).message);
+                        }
+                      }, 1000);
+                      
+                      // Test optimization tip
                       setTimeout(() => {
                         showOptimizationTip("This is a test optimization tip", () => {
                           toast.success("Test action triggered!");
                         });
-                      }, 1000);
+                      }, 2000);
                     }}
                     className="p-2 text-slate-400 hover:text-yellow-400 transition-colors"
                   >

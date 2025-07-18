@@ -500,7 +500,21 @@ export const MODEL_CONFIGURATIONS: Record<string, ModelConfiguration> = {
  * Get model configuration by ID, with fallback to default configuration
  */
 export function getModelConfiguration(modelId: string): ModelConfiguration {
-  const config = MODEL_CONFIGURATIONS[modelId];
+  // First try exact match
+  let config = MODEL_CONFIGURATIONS[modelId];
+  
+  if (!config) {
+    // Try case-insensitive match
+    const lowercaseId = modelId.toLowerCase();
+    const matchingKey = Object.keys(MODEL_CONFIGURATIONS).find(key => 
+      key.toLowerCase() === lowercaseId
+    );
+    
+    if (matchingKey) {
+      config = MODEL_CONFIGURATIONS[matchingKey];
+      console.log(`🔧 Found model configuration for "${modelId}" using case-insensitive match: "${matchingKey}"`);
+    }
+  }
   
   if (config) {
     return config;
@@ -592,6 +606,12 @@ export function validateModelParameters(
   topP = Math.min(topP, limits.topP.max);
   topP = Math.max(topP, limits.topP.min);
   
+  // Azure AI constraint: top_p must be 1 when using greedy sampling (temperature = 0)
+  if (temperature === 0) {
+    topP = 1;
+    console.log(`🔧 Azure AI constraint: Setting top_p=1 for greedy sampling (temperature=0)`);
+  }
+
   const validatedParams: any = {
     maxTokens,
     temperature,
