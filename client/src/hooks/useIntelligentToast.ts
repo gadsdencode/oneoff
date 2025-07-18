@@ -21,10 +21,26 @@ export const useIntelligentToast = (options: UseIntelligentToastOptions) => {
   const serviceRef = useRef<IntelligentToastService | null>(null);
   const lastAnalysisTimeRef = useRef<number>(0);
 
-  // Initialize intelligent toast service
+  // Initialize/reinitialize intelligent toast service when AI service becomes available
   useEffect(() => {
-    if (enabled && aiService && !serviceRef.current) {
-      serviceRef.current = new IntelligentToastService(aiService, toastFunction);
+    if (enabled && aiService && toastFunction) {
+      if (!serviceRef.current) {
+        console.log('🚀 Initializing IntelligentToastService');
+        serviceRef.current = new IntelligentToastService(aiService, toastFunction);
+        
+        // Show a welcome notification to confirm the system is working
+        setTimeout(() => {
+          if (toastFunction) {
+            toastFunction("🧠 Smart Assistant Ready", {
+              description: "Intelligent recommendations and performance insights are now active",
+              duration: 4000
+            });
+          }
+        }, 2000);
+      }
+    } else if (!aiService && serviceRef.current) {
+      // Reset service if AI service becomes unavailable
+      serviceRef.current = null;
     }
   }, [enabled, aiService, toastFunction]);
 
@@ -35,15 +51,22 @@ export const useIntelligentToast = (options: UseIntelligentToastOptions) => {
     responseTime?: number,
     tokenUsage?: number
   ) => {
-    if (!serviceRef.current || !enabled) return;
+    if (!serviceRef.current || !enabled || !aiService) {
+      console.log('⚠️ IntelligentToast analysis skipped - service not ready');
+      return;
+    }
 
     const now = Date.now();
-    // Prevent too frequent analysis (minimum 30 seconds between analyses)
-    if (now - lastAnalysisTimeRef.current < 30000) return;
+    // Reduce minimum time between analyses to 15 seconds for better responsiveness
+    if (now - lastAnalysisTimeRef.current < 15000) {
+      console.log('⚠️ IntelligentToast analysis skipped - too frequent');
+      return;
+    }
 
     lastAnalysisTimeRef.current = now;
+    console.log('🔍 Starting intelligent conversation analysis...');
     await serviceRef.current.analyzeAndRecommend(messages, currentModel, responseTime, tokenUsage);
-  }, [enabled]);
+  }, [enabled, aiService]);
 
   // Track user actions
   const trackAction = useCallback((action: string, data?: any) => {
