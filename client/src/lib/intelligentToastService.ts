@@ -98,12 +98,16 @@ export class IntelligentToastService {
     // Update metrics
     this.updateMetrics(messages, currentModel, responseTime, tokenUsage);
 
-    // Don't analyze too frequently
+    // Reduce analysis frequency throttling - now minimum 60 seconds instead of 2 minutes
     const now = Date.now();
-    if (now - this.lastAnalysisTime < 120000) return; // 2 minutes minimum between analyses
+    if (now - this.lastAnalysisTime < 60000) {
+      console.log('⚠️ Analysis throttled - waiting for cooldown');
+      return;
+    }
     this.lastAnalysisTime = now;
 
     try {
+      console.log('🔍 Performing conversation analysis...');
       // Analyze conversation patterns
       const analysis = await this.performConversationAnalysis(messages, currentModel);
       
@@ -113,8 +117,11 @@ export class IntelligentToastService {
       // Show the most relevant recommendation
       const topRecommendation = this.selectTopRecommendation(recommendations);
       if (topRecommendation && !this.shownRecommendations.has(topRecommendation.id)) {
+        console.log('📢 Showing smart recommendation:', topRecommendation.title);
         this.showSmartToast(topRecommendation);
         this.shownRecommendations.add(topRecommendation.id);
+      } else {
+        console.log('ℹ️ No new recommendations to show');
       }
 
     } catch (error) {
@@ -123,7 +130,11 @@ export class IntelligentToastService {
   }
 
   private async performConversationAnalysis(messages: Message[], currentModel: LLMModel): Promise<any> {
-    if (messages.length < 6) return null; // Require at least 3 exchanges before analyzing
+    // Reduce minimum messages required from 6 to 4 (2 exchanges)
+    if (messages.length < 4) {
+      console.log('⚠️ Not enough messages for analysis yet');
+      return null;
+    }
 
     const recentMessages = messages.slice(-10); // Analyze last 10 messages
     const conversationText = recentMessages.map(m => `${m.role}: ${m.content}`).join('\n');
@@ -206,26 +217,26 @@ Return ONLY a JSON object:
       });
     }
 
-    // Context quality recommendations - only for longer conversations that are genuinely unfocused
-    if (analysis.focusScore < 4 && this.metrics.messageCount > 10) {
+    // Context quality recommendations - lower threshold for better user guidance
+    if (analysis.focusScore < 6 && this.metrics.messageCount > 6) {
       recommendations.push({
         id: 'context-focus',
         title: "🎯 Context Enhancement",
-        description: "Conversation is covering many different topics. Consider starting a new chat or focusing on one area",
+        description: "Conversation is covering multiple topics. Consider focusing on one area for better assistance",
         category: 'suggestion',
         priority: 'low',
         actionable: false
       });
     }
 
-    // Token usage optimization - much higher threshold
-    if (this.metrics.totalTokens > 25000) {
+    // Token usage optimization - lower threshold for earlier warnings
+    if (this.metrics.totalTokens > 15000) {
       recommendations.push({
         id: 'token-optimization',
         title: "📊 Token Usage Alert",
-        description: `Very high token usage (${this.metrics.totalTokens.toLocaleString()}). Consider starting a new conversation for optimal context`,
+        description: `High token usage (${this.metrics.totalTokens.toLocaleString()}). Consider starting a new conversation for optimal context`,
         category: 'alert',
-        priority: 'high',
+        priority: 'medium',
         actionable: true,
         action: {
           label: "New Chat",
@@ -235,7 +246,7 @@ Return ONLY a JSON object:
     }
 
     // Feature enhancement suggestions
-    if (analysis.taskType === 'coding' && this.metrics.attachmentUsage === 0) {
+    if (analysis.taskType === 'coding' && this.metrics.attachmentUsage === 0 && this.metrics.messageCount > 3) {
       recommendations.push({
         id: 'coding-enhancement',
         title: "💻 Coding Enhancement",
@@ -246,8 +257,8 @@ Return ONLY a JSON object:
       });
     }
 
-    // Advanced usage patterns
-    if (analysis.complexity === 'expert' && this.metrics.systemMessageChanges === 0) {
+    // Advanced usage patterns - lower threshold
+    if (analysis.complexity === 'expert' && this.metrics.systemMessageChanges === 0 && this.metrics.messageCount > 4) {
       recommendations.push({
         id: 'expert-system-message',
         title: "🧠 Expert Mode",
