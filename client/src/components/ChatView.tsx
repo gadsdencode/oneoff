@@ -1246,56 +1246,7 @@ const FuturisticAIChat: React.FC = () => {
                   >
                     <Brain className="w-5 h-5" />
                   </RippleButton>
-                  {/* Enhanced test button for intelligent toasts and Azure AI */}
-                  <RippleButton
-                    onClick={async () => {
-                      // Test basic toast
-                      toast("🧪 Test Notification", {
-                        description: "This confirms the toast system is working correctly",
-                        duration: 4000
-                      });
-                      
-                      // Test Azure AI service directly
-                      setTimeout(async () => {
-                        try {
-                          if (aiServiceRef.current) {
-                            console.log('🔬 Testing Azure AI service directly...');
-                            const testResponse = await aiServiceRef.current.sendChatCompletion([
-                              {
-                                role: "system",
-                                content: "You are a helpful assistant."
-                              },
-                              {
-                                role: "user", 
-                                content: "Say 'Hello World' to test the connection."
-                              }
-                            ], { 
-                              maxTokens: 20, 
-                              temperature: 0
-                              // topP will be automatically set to 1 by parameter validation
-                            });
-                            
-                            toast.success("Azure AI Test Passed: " + testResponse);
-                          } else {
-                            toast.error("Azure AI service not initialized");
-                          }
-                        } catch (error) {
-                          console.error('🔬 Azure AI test failed:', error);
-                          toast.error("Azure AI test failed: " + (error as Error).message);
-                        }
-                      }, 1000);
-                      
-                      // Test optimization tip
-                      setTimeout(() => {
-                        showOptimizationTip("This is a test optimization tip", () => {
-                          toast.success("Test action triggered!");
-                        });
-                      }, 2000);
-                    }}
-                    className="p-2 text-slate-400 hover:text-yellow-400 transition-colors"
-                  >
-                    <Zap className="w-5 h-5" />
-                  </RippleButton>
+
                 </div>
                 
                 <div className="flex-1">
