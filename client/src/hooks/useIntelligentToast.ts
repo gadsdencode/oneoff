@@ -14,19 +14,21 @@ interface UseIntelligentToastOptions {
       onClick: () => void;
     };
   }) => void;
+  onModelSwitch?: (modelId: string) => void;
+  onNewChat?: () => void;
 }
 
 export const useIntelligentToast = (options: UseIntelligentToastOptions) => {
-  const { enabled = true, aiService, toastFunction } = options;
+  const { enabled = true, aiService, toastFunction, onModelSwitch, onNewChat } = options;
   const serviceRef = useRef<IntelligentToastService | null>(null);
   const lastAnalysisTimeRef = useRef<number>(0);
 
   // Initialize intelligent toast service
   useEffect(() => {
     if (enabled && aiService && !serviceRef.current) {
-      serviceRef.current = new IntelligentToastService(aiService, toastFunction);
+      serviceRef.current = new IntelligentToastService(aiService, toastFunction, onModelSwitch, onNewChat);
     }
-  }, [enabled, aiService, toastFunction]);
+  }, [enabled, aiService, toastFunction, onModelSwitch, onNewChat]);
 
   // Analyze conversation and show recommendations
   const analyzeConversation = useCallback(async (
