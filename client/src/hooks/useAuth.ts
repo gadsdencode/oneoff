@@ -60,7 +60,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const checkAuthStatus = async () => {
     try {
-      const response = await fetch('/api/auth/status');
+      const response = await fetch('/api/auth/status', {
+        credentials: 'include'
+      });
       const data = await response.json();
       
       if (data.authenticated && data.user) {
@@ -84,6 +86,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({ email, password }),
       });
 
@@ -111,6 +114,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify(userData),
       });
 
@@ -134,6 +138,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       await fetch('/api/auth/logout', {
         method: 'POST',
+        credentials: 'include',
       });
     } catch (error) {
       console.error('Logout error:', error);
@@ -153,6 +158,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify(profileData),
       });
 
@@ -172,7 +178,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const getProfile = async (): Promise<User> => {
     try {
-      const response = await fetch('/api/user/profile');
+      const response = await fetch('/api/user/profile', {
+        credentials: 'include'
+      });
       const data = await response.json();
 
       if (!response.ok) {
