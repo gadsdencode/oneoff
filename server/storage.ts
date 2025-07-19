@@ -1,18 +1,9 @@
 import { users, type User, type InsertUser, type RegisterUser, type OAuthUser } from "@shared/schema";
-import { drizzle } from "drizzle-orm/neon-http";
-import { neon } from "@neondatabase/serverless";
-import { eq, or } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { db } from "./db";
 import dotenv from "dotenv";
 dotenv.config();
-
-if (!process.env.DATABASE_URL) {
-  throw new Error("DATABASE_URL is required");
-}
-
-const sql = neon(process.env.DATABASE_URL);
-const db = drizzle(sql);
 
 export interface IStorage {
   // User CRUD operations
@@ -193,7 +184,7 @@ export class DatabaseStorage implements IStorage {
   }
 }
 
-// Keep memory storage for development/testing purposes
+// Keep memory storage for development/testing purposes (fallback)
 export class MemStorage implements IStorage {
   private users: Map<number, User>;
   currentId: number;
@@ -299,30 +290,5 @@ export class MemStorage implements IStorage {
   }
 }
 
-
-// Use database storage in production, memory storage for development
-export const storage = process.env.NODE_ENV === 'production' || process.env.DATABASE_URL
-  ? new DatabaseStorage()
-  : new MemStorage();
-
-export class DatabaseStorage implements IStorage {
-  async getUser(id: number): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user || undefined;
-  }
-
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
-    return user || undefined;
-  }
-
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const [user] = await db
-      .insert(users)
-      .values(insertUser)
-      .returning();
-    return user;
-  }
-}
-
+// Always use database storage since Replit has PostgreSQL configured
 export const storage = new DatabaseStorage();
