@@ -289,18 +289,74 @@ export class AzureAIService {
         ...(requestBody.presence_penalty !== undefined && { presence_penalty: requestBody.presence_penalty })
       });
 
+      console.log('🔗 Sending Azure AI request:', {
+        endpoint: this.config.endpoint,
+        model: this.config.modelName,
+        messageCount: messages.length
+      });
+
       const response = await this.client.path("/chat/completions").post({
         body: requestBody,
       });
 
+      console.log('📡 Azure AI response status:', response.status);
+
       if (response.status !== "200") {
-        throw new Error(`Azure AI API error: ${response.body.error}`);
+        // Extract detailed error information
+        const errorDetails = this.extractErrorDetails(response.body);
+        console.error('❌ Azure AI API error details:', errorDetails);
+        throw new Error(`Azure AI API error (${response.status}): ${errorDetails}`);
       }
 
-      return response.body.choices[0]?.message?.content || "";
+      const content = response.body.choices[0]?.message?.content || "";
+      console.log('✅ Azure AI response received:', content.substring(0, 100) + '...');
+      return content;
     } catch (error) {
       console.error("Azure AI Service Error:", error);
       throw error;
+    }
+  }
+
+  /**
+   * Extract detailed error information from Azure AI response
+   */
+  private extractErrorDetails(errorBody: any): string {
+    if (!errorBody) {
+      return 'No error details available';
+    }
+
+    // Try different error formats that Azure AI might return
+    if (typeof errorBody === 'string') {
+      return errorBody;
+    }
+
+    if (errorBody.error) {
+      if (typeof errorBody.error === 'string') {
+        return errorBody.error;
+      }
+      
+      if (errorBody.error.message) {
+        return errorBody.error.message;
+      }
+      
+      if (errorBody.error.code && errorBody.error.message) {
+        return `${errorBody.error.code}: ${errorBody.error.message}`;
+      }
+    }
+
+    if (errorBody.message) {
+      return errorBody.message;
+    }
+
+    if (errorBody.detail) {
+      return errorBody.detail;
+    }
+
+    // If all else fails, stringify the object safely
+    try {
+      return JSON.stringify(errorBody, null, 2);
+    } catch {
+      return 'Unable to parse error details';
     }
   }
 
@@ -367,7 +423,26 @@ export class AzureAIService {
       }).asBrowserStream();
 
       if (response.status !== "200") {
-        throw new Error(`Failed to get chat completions, HTTP operation failed with ${response.status} code`);
+        // Try to read error details from stream response
+        let errorDetails = `HTTP ${response.status}`;
+        try {
+          if (response.body) {
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            const { value } = await reader.read();
+            if (value) {
+              const errorText = decoder.decode(value);
+              const errorObj = JSON.parse(errorText);
+              errorDetails = this.extractErrorDetails(errorObj);
+            }
+          }
+        } catch (parseError) {
+          // If we can't parse the error, use the status code
+          errorDetails = `Failed to get chat completions, HTTP ${response.status}`;
+        }
+        
+        console.error('❌ Azure AI streaming error:', errorDetails);
+        throw new Error(`Azure AI streaming error: ${errorDetails}`);
       }
 
       const stream = response.body;
