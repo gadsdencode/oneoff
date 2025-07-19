@@ -138,51 +138,53 @@ const createPersonalizedSystemMessage = (baseSystemMessage: string, user?: User 
     return baseSystemMessage;
   }
 
-  const userInfo = [];
+  // Build user profile repository
+  const userProfileData = [];
   
   // Add user's name if available
   if (user.firstName || user.lastName) {
     const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ');
-    userInfo.push(`The user's name is ${fullName}.`);
+    userProfileData.push(`Name: ${fullName}`);
   } else if (user.username) {
-    userInfo.push(`The user goes by ${user.username}.`);
+    userProfileData.push(`Username: ${user.username}`);
   }
 
   // Add age if available
   if (user.age) {
-    userInfo.push(`They are ${user.age} years old.`);
+    userProfileData.push(`Age: ${user.age}`);
   }
 
-  // Add bio if available
+  // Add bio/interests if available
   if (user.bio) {
-    userInfo.push(`About them: ${user.bio}`);
+    userProfileData.push(`Interests: ${user.bio}`);
   }
 
-  // Add date of birth if available (for context like birthday wishes, etc.)
+  // Add birthday if available
   if (user.dateOfBirth) {
     const birthDate = new Date(user.dateOfBirth);
     const today = new Date();
     const isToday = birthDate.getMonth() === today.getMonth() && birthDate.getDate() === today.getDate();
     
     if (isToday) {
-      userInfo.push(`Today is their birthday! 🎉`);
+      userProfileData.push(`Birthday: TODAY! 🎉`);
     } else {
       const birthMonth = birthDate.toLocaleDateString('en-US', { month: 'long' });
       const birthDay = birthDate.getDate();
-      userInfo.push(`Their birthday is ${birthMonth} ${birthDay}.`);
+      userProfileData.push(`Birthday: ${birthMonth} ${birthDay}`);
     }
   }
 
-  // If we have user information, add it to the system message
-  if (userInfo.length > 0) {
-    const userContextSection = `
+  // If we have user information, add it as a repository section
+  if (userProfileData.length > 0) {
+    const userRepositorySection = `
 
-USER CONTEXT:
-${userInfo.join(' ')}
+---
+USER PROFILE REPOSITORY:
+${userProfileData.join('\n')}
 
-Please use this information to personalize your responses naturally. Address them by name when appropriate, reference their interests or background when relevant, and make the conversation feel more personal and engaging.`;
+This information is available for reference when naturally relevant to the conversation. Use it to provide personalized and contextual responses, but let the conversation flow guide when this context is helpful.`;
 
-    return baseSystemMessage + userContextSection;
+    return baseSystemMessage + userRepositorySection;
   }
 
   return baseSystemMessage;
