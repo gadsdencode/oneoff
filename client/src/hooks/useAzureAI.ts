@@ -141,12 +141,18 @@ export interface AzureAIOptions {
 }
 
 // Function to create personalized system message
-const createPersonalizedSystemMessage = (baseSystemMessage: string, user?: User | null): string => {
+const createPersonalizedSystemMessage = (baseSystemMessage: string, user?: User | null, isFirstInteraction: boolean = false): string => {
   if (!user) {
     return baseSystemMessage;
   }
 
-  // Build user profile repository
+  // Only add user profile repository for the first interaction or when explicitly requested
+  // This prevents the AI from seeing user data and thinking it should greet repeatedly
+  if (!isFirstInteraction) {
+    return baseSystemMessage;
+  }
+
+  // Build user profile repository ONLY for first interaction
   const userProfileData = [];
   
   // Add user's name if available
@@ -284,10 +290,20 @@ export const useAzureAI = (options: AzureAIOptions = {}): UseAzureAIReturn => {
   // Convert app messages to Azure AI format
   const convertToAzureAIMessages = useCallback((messages: Message[]): AzureAIMessage[] => {
     const systemContent = options.systemMessage || SYSTEM_MESSAGE_PRESETS.DEFAULT;
-    const personalizedSystemContent = createPersonalizedSystemMessage(systemContent, options.userContext?.user);
+    
+    // Check if this is the first real user interaction (excluding welcome message)
+    const userMessages = messages.filter(msg => msg.role === "user" && msg.id !== "1");
+    const isFirstUserInteraction = userMessages.length <= 1;
+    
+    const personalizedSystemContent = createPersonalizedSystemMessage(
+      systemContent, 
+      options.userContext?.user, 
+      isFirstUserInteraction
+    );
       
     // DEBUG: Log the personalized system message
     console.log('🎯 Personalized system message:', personalizedSystemContent.substring(0, 200) + '...');
+    console.log('🔍 Is first user interaction:', isFirstUserInteraction, '| User messages count:', userMessages.length);
     
     // Add system message
     const azureMessages: AzureAIMessage[] = [
