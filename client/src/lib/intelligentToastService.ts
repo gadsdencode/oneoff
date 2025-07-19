@@ -26,6 +26,49 @@ export interface SmartToast {
   data?: any;
 }
 
+export interface ConversationInsights {
+  // User interaction patterns
+  userInteractionStyle: {
+    communicationType: 'direct' | 'exploratory' | 'detailed' | 'concise' | 'iterative';
+    questionStyle: 'specific' | 'open-ended' | 'follow-up' | 'clarifying';
+    engagementLevel: 'high' | 'medium' | 'low';
+    patienceLevel: 'high' | 'medium' | 'low';
+  };
+  
+  // Conversation dynamics
+  conversationDynamics: {
+    topicDepth: 'surface' | 'moderate' | 'deep' | 'expert';
+    focusPattern: 'single-topic' | 'multi-topic' | 'branching' | 'returning';
+    complexityProgression: 'increasing' | 'decreasing' | 'stable' | 'fluctuating';
+    responsePreference: 'detailed' | 'concise' | 'step-by-step' | 'overview';
+  };
+  
+  // Behavioral insights
+  behavioralInsights: {
+    learningStyle: 'visual' | 'practical' | 'theoretical' | 'experimental';
+    problemSolvingApproach: 'systematic' | 'creative' | 'pragmatic' | 'analytical';
+    confidenceLevel: 'high' | 'medium' | 'low';
+    expertiseArea: string[];
+    improvementAreas: string[];
+  };
+  
+  // Interaction quality
+  interactionQuality: {
+    clarityScore: number; // 1-10
+    efficiencyScore: number; // 1-10
+    satisfactionPrediction: number; // 1-10
+    potentialFrustrationPoints: string[];
+  };
+  
+  // Hidden patterns
+  hiddenInsights: {
+    thinkingPattern: string;
+    aiAssumptions: string;
+    uncertaintyHandling: string;
+    motivation: string;
+  };
+}
+
 export interface ConversationMetrics {
   totalTokens: number;
   averageResponseTime: number;
@@ -38,6 +81,19 @@ export interface ConversationMetrics {
   topicComplexity: 'simple' | 'moderate' | 'complex' | 'technical';
   currentModel: string;
   modelEfficiency: number;
+  interactionPatterns: {
+    communicationTypes: string[];
+    questionStyles: string[];
+    engagementTrend: 'increasing' | 'decreasing' | 'stable';
+    averageMessageLength: number;
+    followUpFrequency: number;
+  };
+  behavioralProfile: {
+    learningStyle: string;
+    problemSolvingApproach: string;
+    confidenceTrend: 'increasing' | 'decreasing' | 'stable';
+    expertiseAreas: string[];
+  };
 }
 
 export interface PerformanceData {
@@ -102,7 +158,20 @@ export class IntelligentToastService {
       conversationLength: 0,
       topicComplexity: 'simple',
       currentModel: '',
-      modelEfficiency: 100
+      modelEfficiency: 100,
+      interactionPatterns: {
+        communicationTypes: [],
+        questionStyles: [],
+        engagementTrend: 'stable',
+        averageMessageLength: 0,
+        followUpFrequency: 0
+      },
+      behavioralProfile: {
+        learningStyle: 'theoretical',
+        problemSolvingApproach: 'systematic',
+        confidenceTrend: 'stable',
+        expertiseAreas: []
+      }
     };
   }
 
@@ -145,7 +214,7 @@ export class IntelligentToastService {
       } catch (aiError) {
         console.warn('⚠️ Azure AI analysis failed, using fallback:', aiError);
         // Generate fallback analysis without Azure AI
-        analysis = this.generateFallbackAnalysis(messages, currentModel);
+        analysis = this.generateEnhancedFallbackAnalysis(messages, currentModel);
         console.log('🔄 Using fallback analysis:', analysis);
       }
       
@@ -197,92 +266,121 @@ export class IntelligentToastService {
   }
 
   private async performConversationAnalysis(messages: Message[], currentModel: LLMModel): Promise<any> {
-    // Temporarily reduce to 2 messages for immediate testing
     if (messages.length < 2) {
       console.log('⚠️ Not enough messages for analysis yet');
       return null;
     }
 
-    console.log(`🔍 Starting Azure AI analysis for ${messages.length} messages...`);
+    console.log(`🔍 Starting enhanced conversation analysis for ${messages.length} messages...`);
 
-    const recentMessages = messages.slice(-10); // Analyze last 10 messages
+    const recentMessages = messages.slice(-15); // Analyze last 15 messages for better context
     const conversationText = recentMessages.map(m => `${m.role}: ${m.content}`).join('\n');
+    
+    // Extract user messages for pattern analysis
+    const userMessages = recentMessages.filter(m => m.role === 'user');
+    const assistantMessages = recentMessages.filter(m => m.role === 'assistant');
 
-    console.log('📝 Conversation text preview:', conversationText.substring(0, 200) + '...');
-
-    // Build available models context for AI
-    const modelOptions = this.availableModels
-      .filter(m => m.id !== currentModel.id) // Exclude current model
-      .map(m => ({
-        id: m.id,
-        name: m.name,
-        category: m.category,
-        performance: m.performance,
-        strengths: this.getModelStrengths(m),
-        bestFor: this.getModelBestUseCase(m)
-      }));
-
-    const analysisPrompt = `Analyze this conversation and recommend the optimal model:
+    const analysisPrompt = `Analyze this conversation to understand the user's interaction patterns and provide hidden insights:
 
 CONVERSATION:
 ${conversationText}
 
-CURRENT MODEL:
-- ID: ${currentModel.id}
-- Name: ${currentModel.name}
-- Category: ${currentModel.category}
-- Performance: ${currentModel.performance}
-- Capabilities: ${JSON.stringify(currentModel.capabilities)}
-
-AVAILABLE ALTERNATIVE MODELS:
-${JSON.stringify(modelOptions, null, 2)}
+ANALYSIS TASK:
+Provide deep insights about the user's interaction style, communication patterns, and behavioral tendencies. Focus on revealing "hidden insights" that would help understand how this user thinks and interacts with AI.
 
 ANALYSIS CRITERIA:
-1. What type of task is being performed? (coding, creative writing, analysis, research, technical discussion)
-2. What complexity level is required? (simple, moderate, complex, expert)
-3. Is the current model optimal for this specific task?
-4. Which alternative model (if any) would perform significantly better?
-5. How focused is the conversation? (1-10 scale)
 
-IMPORTANT: Only recommend a different model if it would provide meaningfully better results (20%+ improvement) for the specific task being performed.
+1. **User Interaction Style Analysis:**
+   - How does the user communicate? (direct, exploratory, detailed, concise, iterative)
+   - What type of questions do they ask? (specific, open-ended, follow-up, clarifying)
+   - What's their engagement level? (high, medium, low)
+   - How patient are they with responses? (high, medium, low)
 
-Return ONLY a JSON object:
+2. **Conversation Dynamics:**
+   - How deep do they go into topics? (surface, moderate, deep, expert)
+   - How do they handle multiple topics? (single-topic, multi-topic, branching, returning)
+   - Does complexity increase, decrease, or stay stable?
+   - What response style do they prefer? (detailed, concise, step-by-step, overview)
+
+3. **Behavioral Insights:**
+   - What's their learning style? (visual, practical, theoretical, experimental)
+   - How do they approach problem-solving? (systematic, creative, pragmatic, analytical)
+   - What's their confidence level? (high, medium, low)
+   - What areas show expertise vs. areas for improvement?
+
+4. **Interaction Quality Assessment:**
+   - Rate clarity of communication (1-10)
+   - Rate efficiency of interaction (1-10)
+   - Predict satisfaction level (1-10)
+   - Identify potential frustration points
+
+5. **Hidden Patterns:**
+   - What subtle patterns reveal their thinking process?
+   - What assumptions do they make about AI capabilities?
+   - How do they handle uncertainty or ambiguity?
+   - What motivates their questions?
+
+Return ONLY a JSON object with this structure:
 {
-  "taskType": "coding|creative|analysis|research|conversation|technical",
-  "complexity": "simple|moderate|complex|expert",
-  "modelOptimal": true|false,
-  "modelRecommendation": "model-id-only-if-significantly-better",
-  "improvementReason": "specific reason why recommended model is better",
-  "focusScore": 1-10,
-  "confidenceScore": 1-10
+  "userInteractionStyle": {
+    "communicationType": "direct|exploratory|detailed|concise|iterative",
+    "questionStyle": "specific|open-ended|follow-up|clarifying",
+    "engagementLevel": "high|medium|low",
+    "patienceLevel": "high|medium|low"
+  },
+  "conversationDynamics": {
+    "topicDepth": "surface|moderate|deep|expert",
+    "focusPattern": "single-topic|multi-topic|branching|returning",
+    "complexityProgression": "increasing|decreasing|stable|fluctuating",
+    "responsePreference": "detailed|concise|step-by-step|overview"
+  },
+  "behavioralInsights": {
+    "learningStyle": "visual|practical|theoretical|experimental",
+    "problemSolvingApproach": "systematic|creative|pragmatic|analytical",
+    "confidenceLevel": "high|medium|low",
+    "expertiseArea": ["area1", "area2"],
+    "improvementAreas": ["area1", "area2"]
+  },
+  "interactionQuality": {
+    "clarityScore": 1-10,
+    "efficiencyScore": 1-10,
+    "satisfactionPrediction": 1-10,
+    "potentialFrustrationPoints": ["point1", "point2"]
+  },
+  "hiddenInsights": {
+    "thinkingPattern": "description of how they think",
+    "aiAssumptions": "what they assume about AI",
+    "uncertaintyHandling": "how they handle uncertainty",
+    "motivation": "what drives their questions"
+  }
 }`;
 
-    const response = await this.aiService.sendChatCompletion([
-      {
-        role: "system",
-        content: "You are an expert AI model analyzer. Recommend model switches only when they provide significant, measurable improvements for the specific task. Be conservative - only recommend changes when clearly beneficial."
-      },
-      {
-        role: "user",
-        content: analysisPrompt
-      }
-    ], { maxTokens: 800, temperature: 0.2 });
+    try {
+      const response = await this.aiService.sendChatCompletion([
+        {
+          role: "system",
+          content: "You are an expert in analyzing human-AI interaction patterns. Focus on revealing subtle insights about user behavior, communication style, and interaction preferences. Be insightful and specific."
+        },
+        {
+          role: "user",
+          content: analysisPrompt
+        }
+      ], { maxTokens: 1200, temperature: 0.3 });
 
-    console.log('📡 Azure AI response received:', response.substring(0, 200) + '...');
-
-    // Enhanced JSON parsing with sanitization
-          console.log('🔍 Full Azure AI response for parsing:', response);
+      console.log('📡 Enhanced analysis response received:', response.substring(0, 200) + '...');
+      
       const parsed = this.parseAzureAIResponse(response);
       if (parsed) {
-        console.log('✅ Successfully parsed Azure AI analysis:', parsed);
+        console.log('✅ Successfully parsed enhanced analysis:', parsed);
         return parsed;
       } else {
-        console.warn('⚠️ Could not parse Azure AI response, using fallback');
-        return null;
+        console.warn('⚠️ Could not parse enhanced analysis, using fallback');
+        return this.generateEnhancedFallbackAnalysis(messages, currentModel);
       }
     } catch (apiError: any) {
-      console.error('❌ Azure AI API call failed:', apiError);
-      throw apiError; // Re-throw so the fallback mechanism kicks in
+      console.error('❌ Enhanced analysis failed:', apiError);
+      return this.generateEnhancedFallbackAnalysis(messages, currentModel);
+    }
   }
 
   /**
@@ -432,40 +530,72 @@ Return ONLY a JSON object:
   private validateAnalysisResponse(obj: any): boolean {
     return obj && 
            typeof obj === 'object' &&
-           (obj.taskType || obj.complexity || obj.modelOptimal !== undefined);
+           (obj.userInteractionStyle || obj.conversationDynamics || obj.behavioralInsights || 
+            obj.taskType || obj.complexity || obj.modelOptimal !== undefined);
   }
 
   /**
-   * Generate fallback analysis when Azure AI is not available
+   * Generate enhanced fallback analysis when Azure AI is not available
    */
-  private generateFallbackAnalysis(messages: Message[], currentModel: LLMModel): any {
-    console.log('🔄 Generating fallback analysis...');
+  private generateEnhancedFallbackAnalysis(messages: Message[], currentModel: LLMModel): any {
+    console.log('🔄 Generating enhanced fallback analysis...');
     
     const userMessages = messages.filter(m => m.role === 'user');
-    const lastMessage = messages[messages.length - 1];
+    const assistantMessages = messages.filter(m => m.role === 'assistant');
     
-    // Simple heuristics-based analysis
-    const hasCode = userMessages.some(m => m.content.includes('```') || 
-      m.content.toLowerCase().includes('code') || 
-      m.content.toLowerCase().includes('function'));
-    
-    const hasComplexTerms = userMessages.some(m => 
-      ['algorithm', 'optimization', 'architecture', 'scalability', 'distributed'].some(term =>
-        m.content.toLowerCase().includes(term)
-      )
+    // Analyze message patterns
+    const avgUserMessageLength = userMessages.reduce((sum, m) => sum + m.content.length, 0) / userMessages.length;
+    const hasCode = userMessages.some(m => m.content.includes('```') || m.content.toLowerCase().includes('code'));
+    const hasQuestions = userMessages.some(m => m.content.includes('?'));
+    const hasFollowUps = userMessages.length > 2 && userMessages.slice(-2).some(m => 
+      m.content.toLowerCase().includes('what about') || 
+      m.content.toLowerCase().includes('can you') ||
+      m.content.toLowerCase().includes('how about')
     );
     
-    const isLongConversation = messages.length > 15;
-    const isVeryLongConversation = messages.length > 25;
+    // Determine interaction patterns
+    const communicationType = avgUserMessageLength > 200 ? 'detailed' : 
+                             hasFollowUps ? 'iterative' : 
+                             hasQuestions ? 'exploratory' : 'direct';
+    
+    const questionStyle = hasFollowUps ? 'follow-up' : 
+                         hasQuestions ? 'open-ended' : 'specific';
+    
+    const engagementLevel = userMessages.length > 5 ? 'high' : 
+                           userMessages.length > 2 ? 'medium' : 'low';
     
     return {
-      taskType: hasCode ? 'coding' : 'conversation',
-      complexity: hasComplexTerms ? 'expert' : isLongConversation ? 'moderate' : 'simple',
-      modelOptimal: currentModel.performance > 90,
-      modelRecommendation: hasCode && currentModel.id !== 'gpt-4o' ? 'gpt-4o' : null,
-      focusScore: isVeryLongConversation ? 4 : isLongConversation ? 6 : 8,
-      improvementAreas: isLongConversation ? ['context', 'focus'] : [],
-      keyInsights: ['conversation_flow', 'model_usage']
+      userInteractionStyle: {
+        communicationType,
+        questionStyle,
+        engagementLevel,
+        patienceLevel: 'medium'
+      },
+      conversationDynamics: {
+        topicDepth: hasCode ? 'deep' : 'moderate',
+        focusPattern: userMessages.length > 8 ? 'multi-topic' : 'single-topic',
+        complexityProgression: 'stable',
+        responsePreference: 'detailed'
+      },
+      behavioralInsights: {
+        learningStyle: hasCode ? 'practical' : 'theoretical',
+        problemSolvingApproach: hasCode ? 'systematic' : 'creative',
+        confidenceLevel: 'medium',
+        expertiseArea: hasCode ? ['programming'] : ['general'],
+        improvementAreas: ['communication_clarity']
+      },
+      interactionQuality: {
+        clarityScore: 7,
+        efficiencyScore: 6,
+        satisfactionPrediction: 8,
+        potentialFrustrationPoints: ['response_length', 'complexity']
+      },
+      hiddenInsights: {
+        thinkingPattern: "User shows systematic approach to problem-solving",
+        aiAssumptions: "Expects detailed, comprehensive responses",
+        uncertaintyHandling: "Asks clarifying questions when needed",
+        motivation: "Seeks practical, actionable solutions"
+      }
     };
   }
 
@@ -491,6 +621,98 @@ Return ONLY a JSON object:
     if (model.performance >= 95) return "High-accuracy professional tasks";
     if (model.cost < 0.001) return "High-volume or cost-sensitive applications";
     return "General-purpose conversations";
+  }
+
+  /**
+   * Generate insight-based recommendations from conversation analysis
+   */
+  private generateInsightBasedRecommendations(insights: any): SmartToast[] {
+    const recommendations: SmartToast[] = [];
+    
+    // Communication style insights
+    if (insights.userInteractionStyle?.communicationType === 'detailed') {
+      recommendations.push({
+        id: 'communication-style-detailed',
+        title: "📝 Detailed Communicator Detected",
+        description: "You prefer comprehensive explanations. The AI is adapting to provide more thorough responses.",
+        category: 'insight',
+        priority: 'low',
+        actionable: false
+      });
+    }
+    
+    if (insights.userInteractionStyle?.communicationType === 'iterative') {
+      recommendations.push({
+        id: 'communication-style-iterative',
+        title: "🔄 Iterative Problem Solver",
+        description: "You build solutions step by step. This approach often leads to better results!",
+        category: 'insight',
+        priority: 'low',
+        actionable: false
+      });
+    }
+    
+    // Learning style insights
+    if (insights.behavioralInsights?.learningStyle === 'practical') {
+      recommendations.push({
+        id: 'learning-style-practical',
+        title: "🔧 Hands-On Learner",
+        description: "You learn best through practical examples. Try asking for code samples or step-by-step guides.",
+        category: 'suggestion',
+        priority: 'medium',
+        actionable: false
+      });
+    }
+    
+    // Confidence insights
+    if (insights.behavioralInsights?.confidenceLevel === 'low') {
+      recommendations.push({
+        id: 'confidence-boost',
+        title: "💪 Building Confidence",
+        description: "Your questions show you're learning. Don't hesitate to ask for clarification - it's a sign of good thinking!",
+        category: 'insight',
+        priority: 'low',
+        actionable: false
+      });
+    }
+    
+    // Efficiency insights
+    if (insights.interactionQuality?.efficiencyScore < 6) {
+      recommendations.push({
+        id: 'efficiency-tip',
+        title: "⚡ Efficiency Tip",
+        description: "Try being more specific in your questions. It helps the AI provide more targeted, useful responses.",
+        category: 'suggestion',
+        priority: 'medium',
+        actionable: false
+      });
+    }
+    
+    // Hidden pattern insights
+    if (insights.hiddenInsights?.thinkingPattern) {
+      recommendations.push({
+        id: 'thinking-pattern',
+        title: "🧠 Your Thinking Pattern",
+        description: insights.hiddenInsights.thinkingPattern,
+        category: 'insight',
+        priority: 'low',
+        actionable: false
+      });
+    }
+    
+    // Interaction quality insights
+    if (insights.interactionQuality?.satisfactionPrediction >= 8) {
+      recommendations.push({
+        id: 'high-satisfaction',
+        title: "😊 Great Interaction Quality",
+        description: "You're having a highly effective conversation! Your clear communication style is working well.",
+        category: 'insight',
+        priority: 'low',
+        actionable: false
+      });
+    }
+    
+    return recommendations;
   }
 
   private generateRecommendations(analysis: any, currentModel: LLMModel): SmartToast[] {
@@ -538,6 +760,13 @@ Return ONLY a JSON object:
     if (!analysis) {
       console.log('ℹ️ No analysis available, returning basic recommendations only');
       return recommendations;
+    }
+
+    // Add insight-based recommendations
+    if (analysis.userInteractionStyle || analysis.behavioralInsights) {
+      const insightRecommendations = this.generateInsightBasedRecommendations(analysis);
+      recommendations.push(...insightRecommendations);
+      console.log(`💡 Generated ${insightRecommendations.length} insight-based recommendations`);
     }
 
     // Model optimization recommendations - with proper filtering and realistic efficiency
@@ -697,6 +926,9 @@ Return ONLY a JSON object:
     this.metrics.messageCount = messages.length;
     this.metrics.currentModel = currentModel.id;
     
+    // Update interaction patterns
+    this.updateInteractionPatterns(messages);
+    
     if (responseTime) {
       this.performanceHistory.push({
         responseTime,
@@ -717,6 +949,49 @@ Return ONLY a JSON object:
     if (tokenUsage) {
       this.metrics.totalTokens += tokenUsage;
     }
+  }
+
+  private updateInteractionPatterns(messages: Message[]): void {
+    const userMessages = messages.filter(m => m.role === 'user');
+    
+    if (userMessages.length === 0) return;
+    
+    // Calculate average message length
+    const totalLength = userMessages.reduce((sum, m) => sum + m.content.length, 0);
+    this.metrics.interactionPatterns.averageMessageLength = totalLength / userMessages.length;
+    
+    // Analyze recent communication patterns
+    const recentMessages = userMessages.slice(-5);
+    const hasQuestions = recentMessages.some(m => m.content.includes('?'));
+    const hasFollowUps = recentMessages.length > 1 && recentMessages.slice(-2).some(m => 
+      m.content.toLowerCase().includes('what about') || 
+      m.content.toLowerCase().includes('can you') ||
+      m.content.toLowerCase().includes('how about')
+    );
+    
+    // Update communication types
+    if (this.metrics.interactionPatterns.averageMessageLength > 200 && 
+        !this.metrics.interactionPatterns.communicationTypes.includes('detailed')) {
+      this.metrics.interactionPatterns.communicationTypes.push('detailed');
+    }
+    
+    if (hasFollowUps && !this.metrics.interactionPatterns.communicationTypes.includes('iterative')) {
+      this.metrics.interactionPatterns.communicationTypes.push('iterative');
+    }
+    
+    // Update question styles
+    if (hasQuestions && !this.metrics.interactionPatterns.questionStyles.includes('open-ended')) {
+      this.metrics.interactionPatterns.questionStyles.push('open-ended');
+    }
+    
+    if (hasFollowUps && !this.metrics.interactionPatterns.questionStyles.includes('follow-up')) {
+      this.metrics.interactionPatterns.questionStyles.push('follow-up');
+    }
+    
+    // Calculate follow-up frequency
+    this.metrics.interactionPatterns.followUpFrequency = hasFollowUps ? 
+      (this.metrics.interactionPatterns.followUpFrequency + 1) / 2 : 
+      this.metrics.interactionPatterns.followUpFrequency * 0.9;
   }
 
   private calculateModelMatch(messages: Message[], model: LLMModel): number {
