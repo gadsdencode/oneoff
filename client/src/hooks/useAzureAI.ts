@@ -284,8 +284,13 @@ export const useAzureAI = (options: AzureAIOptions = {}): UseAzureAIReturn => {
       }
     ];
 
-    // Convert user and assistant messages
+    // Convert user and assistant messages, but exclude the initial welcome message
     messages.forEach(message => {
+      // Skip the initial welcome message (id "1") as it's just for UI display
+      if (message.id === "1") {
+        return;
+      }
+      
       if (message.role === "user" || message.role === "assistant") {
         azureMessages.push({
           role: message.role,
