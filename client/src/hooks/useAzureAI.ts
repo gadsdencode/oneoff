@@ -12,11 +12,14 @@ export const SYSTEM_MESSAGE_PRESETS = {
   DEFAULT: `You are Nomad, a versatile and helpful AI assistant. Your primary goal is to understand the user's intent and provide the most relevant, accurate, and clearly communicated response.
 
 CONVERSATION GUIDELINES:
-- This is an ongoing conversation. Respond naturally to each message based on the full conversation context.
-- Do not repeat greetings or introductions unless the user specifically asks for them.
-- Build upon previous exchanges and maintain conversational flow.
-- Use the user's name sparingly and naturally when it adds value to the response.
-- Focus on the user's current question or request, not on re-introducing yourself.
+- This is an ongoing conversation with context maintained across all interactions
+- Respond naturally to each message based on the full conversation context
+- DO NOT repeat greetings, introductions, or acknowledgments unless specifically requested
+- DO NOT act as if you're meeting the user for the first time in subsequent messages
+- Build upon previous exchanges and maintain conversational flow
+- Use the user's name and context naturally when it adds value to the response
+- Focus on the user's current question or request, not on establishing identity
+- If you have access to user profile information, use it contextually without announcing it
 
 CORE PRINCIPLES:
 1. **Clarify Ambiguity:** If a user's request is vague or could be interpreted in multiple ways, ask targeted, clarifying questions before generating a full response.
@@ -142,18 +145,13 @@ export interface AzureAIOptions {
 }
 
 // Function to create personalized system message
-const createPersonalizedSystemMessage = (baseSystemMessage: string, user?: User | null, isFirstInteraction: boolean = false): string => {
+const createPersonalizedSystemMessage = (baseSystemMessage: string, user?: User | null): string => {
   if (!user) {
     return baseSystemMessage;
   }
 
-  // Only add user profile repository for the first interaction or when explicitly requested
-  // This prevents the AI from seeing user data and thinking it should greet repeatedly
-  if (!isFirstInteraction) {
-    return baseSystemMessage;
-  }
-
-  // Build user profile repository ONLY for first interaction
+  // Build user profile repository for EVERY interaction
+  // This ensures the AI always has context about the user
   const userProfileData = [];
   
   // Add user's name if available
@@ -189,7 +187,7 @@ const createPersonalizedSystemMessage = (baseSystemMessage: string, user?: User 
     }
   }
 
-  // If we have user information, add it as a repository section
+  // Always include user information when available
   if (userProfileData.length > 0) {
     const userRepositorySection = `
 
@@ -197,7 +195,13 @@ const createPersonalizedSystemMessage = (baseSystemMessage: string, user?: User 
 USER PROFILE REPOSITORY:
 ${userProfileData.join('\n')}
 
-This information is available for reference when naturally relevant to the conversation. Use it to provide personalized and contextual responses, but let the conversation flow guide when this context is helpful.`;
+IMPORTANT CONTEXT GUIDELINES:
+- You have ongoing access to this user's profile information
+- Use this context naturally when relevant to the conversation
+- DO NOT greet the user or introduce yourself repeatedly
+- DO NOT acknowledge having "new" access to their information
+- Simply use the context appropriately as the conversation flows
+- Respond to their actual questions and requests, not their identity`;
 
     return baseSystemMessage + userRepositorySection;
   }
@@ -292,25 +296,14 @@ export const useAzureAI = (options: AzureAIOptions = {}): UseAzureAIReturn => {
   const convertToAzureAIMessages = useCallback((messages: Message[]): AzureAIMessage[] => {
     const systemContent = options.systemMessage || SYSTEM_MESSAGE_PRESETS.DEFAULT;
     
-    // Check if this is the first real user interaction (excluding welcome message)
-    const userMessages = messages.filter(msg => msg.role === "user" && msg.id !== "1");
-    
-    // NEVER include user repository after the welcome message has been shown
-    // The welcome message already handled the personalized greeting
-    const hasWelcomeMessage = messages.some(msg => msg.id === "1");
-    const shouldIncludeUserRepository = !hasWelcomeMessage && userMessages.length === 0;
-    
+    // Always include user context when available - this aligns with Azure AI best practices
+    // Azure AI models have no memory, so context must be provided with every request
     const personalizedSystemContent = createPersonalizedSystemMessage(
       systemContent, 
-      options.userContext?.user, 
-      shouldIncludeUserRepository
+      options.userContext?.user
     );
       
-    // DEBUG: Log the personalized system message
-    console.log('🎯 Personalized system message:', personalizedSystemContent.substring(0, 200) + '...');
-    console.log('🔍 Should include user repository:', shouldIncludeUserRepository, '| Has welcome message:', hasWelcomeMessage, '| User messages count:', userMessages.length);
-    
-    // Add system message
+    // Add system message with user context
     const azureMessages: AzureAIMessage[] = [
       {
         role: "system",
@@ -319,17 +312,13 @@ export const useAzureAI = (options: AzureAIOptions = {}): UseAzureAIReturn => {
     ];
 
     // Convert user and assistant messages, but exclude the initial welcome message
-    let conversationMessageCount = 0;
     messages.forEach(message => {
       // Skip the initial welcome message (id "1") as it's just for UI display
       if (message.id === "1") {
-        console.log('🚫 Skipping welcome message (id "1"):', message.content.substring(0, 50) + '...');
         return;
       }
       
       if (message.role === "user" || message.role === "assistant") {
-        conversationMessageCount++;
-        console.log(`📨 Adding message ${conversationMessageCount}: ${message.role} - ${message.content.substring(0, 50)}...`);
         azureMessages.push({
           role: message.role,
           content: message.content
@@ -337,7 +326,6 @@ export const useAzureAI = (options: AzureAIOptions = {}): UseAzureAIReturn => {
       }
     });
     
-    console.log(`💬 Total conversation messages being sent: ${conversationMessageCount} (+ 1 system message)`);
     return azureMessages;
   }, [options.systemMessage, options.userContext?.user]);
 
