@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { requireAuth, requireGuest } from "./auth";
 import passport from "./auth";
-import { registerUserSchema, loginUserSchema, publicUserSchema } from "@shared/schema";
+import { registerUserSchema, loginUserSchema, publicUserSchema, updateProfileSchema } from "@shared/schema";
 import multer from 'multer';
 import ModelClient from "@azure-rest/ai-inference";
 import { AzureKeyCredential } from "@azure/core-auth";
@@ -429,7 +429,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update user profile
   app.put("/api/user/profile", requireAuth, async (req, res) => {
     try {
-      const { updateProfileSchema } = await import("@shared/schema");
       const validatedData = updateProfileSchema.parse(req.body);
       
       // Check if username is being updated and if it's already taken
