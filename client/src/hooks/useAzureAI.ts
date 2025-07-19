@@ -10,10 +10,18 @@ export const SYSTEM_MESSAGE_PRESETS = {
    * General-purpose, robust default. Focuses on clarity, safety, and understanding user intent.
    */
   DEFAULT: `You are Nomad, a versatile and helpful AI assistant. Your primary goal is to understand the user's intent and provide the most relevant, accurate, and clearly communicated response.
-1.  **Clarify Ambiguity:** If a user's request is vague or could be interpreted in multiple ways, ask targeted, clarifying questions before generating a full response.
-2.  **Prioritize Accuracy & Safety:** Base your responses on established facts and sound reasoning. If information is speculative or your knowledge is limited, state it clearly. Do not provide dangerous or harmful instructions.
-3.  **Structure for Clarity:** Use lists, bullet points, and bolding to make complex information easy to digest.
-4.  **Be Concise yet Comprehensive:** Provide enough detail to be thorough, but avoid unnecessary verbosity. Get to the point efficiently.`,
+
+CONVERSATION GUIDELINES:
+- This is an ongoing conversation. Respond naturally to each message based on the full conversation context.
+- Do not repeat greetings or introductions unless the user specifically asks for them.
+- Build upon previous exchanges and maintain conversational flow.
+- Use the user's name sparingly and naturally when it adds value to the response.
+
+CORE PRINCIPLES:
+1. **Clarify Ambiguity:** If a user's request is vague or could be interpreted in multiple ways, ask targeted, clarifying questions before generating a full response.
+2. **Prioritize Accuracy & Safety:** Base your responses on established facts and sound reasoning. If information is speculative or your knowledge is limited, state it clearly. Do not provide dangerous or harmful instructions.
+3. **Structure for Clarity:** Use lists, bullet points, and bolding to make complex information easy to digest.
+4. **Be Concise yet Comprehensive:** Provide enough detail to be thorough, but avoid unnecessary verbosity. Get to the point efficiently.`,
 
   /**
    * For professional, business, and corporate contexts. Emphasizes actionability, structure, and a polished tone.
@@ -278,6 +286,9 @@ export const useAzureAI = (options: AzureAIOptions = {}): UseAzureAIReturn => {
     const systemContent = options.systemMessage || SYSTEM_MESSAGE_PRESETS.DEFAULT;
     const personalizedSystemContent = createPersonalizedSystemMessage(systemContent, options.userContext?.user);
       
+    // DEBUG: Log the personalized system message
+    console.log('🎯 Personalized system message:', personalizedSystemContent.substring(0, 200) + '...');
+    
     // Add system message
     const azureMessages: AzureAIMessage[] = [
       {
@@ -287,20 +298,25 @@ export const useAzureAI = (options: AzureAIOptions = {}): UseAzureAIReturn => {
     ];
 
     // Convert user and assistant messages, but exclude the initial welcome message
+    let conversationMessageCount = 0;
     messages.forEach(message => {
       // Skip the initial welcome message (id "1") as it's just for UI display
       if (message.id === "1") {
+        console.log('🚫 Skipping welcome message (id "1"):', message.content.substring(0, 50) + '...');
         return;
       }
       
       if (message.role === "user" || message.role === "assistant") {
+        conversationMessageCount++;
+        console.log(`📨 Adding message ${conversationMessageCount}: ${message.role} - ${message.content.substring(0, 50)}...`);
         azureMessages.push({
           role: message.role,
           content: message.content
         });
       }
     });
-
+    
+    console.log(`💬 Total conversation messages being sent: ${conversationMessageCount} (+ 1 system message)`);
     return azureMessages;
   }, [options.systemMessage, options.userContext?.user]);
 

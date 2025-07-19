@@ -833,6 +833,13 @@ const FuturisticAIChat: React.FC = () => {
     };
 
     const updatedMessages = [...messages, userMessage];
+    
+    // DEBUG: Log current conversation state
+    console.log('🗨️ Current conversation state before sending to AI:');
+    updatedMessages.forEach((msg, index) => {
+      console.log(`  [${index}] ${msg.role} (${msg.id}): ${msg.content.substring(0, 60)}...`);
+    });
+    
     setMessages(updatedMessages);
     setInput("");
     setAttachments([]);
