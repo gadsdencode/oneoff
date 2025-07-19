@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { AzureAIService } from "../lib/azureAI";
 import { Message, AzureAIMessage, ChatCompletionOptions, LLMModel, ModelCapabilities } from "../types";
 import { getModelConfiguration } from "../lib/modelConfigurations";
+import { User } from "./useAuth";
 
 // System message presets for different use cases
 export const SYSTEM_MESSAGE_PRESETS = {
@@ -118,11 +119,74 @@ export const SYSTEM_MESSAGE_PRESETS = {
 - **Language:** Your tone is upbeat, encouraging, and full of possibility. Focus on creating connection and fun for the user and their partner.`
 } as const;
 
-interface UseAzureAIOptions {
-  enableStreaming?: boolean;
-  chatOptions?: ChatCompletionOptions;
-  systemMessage?: string;
+// User context interface for AI personalization
+export interface UserContext {
+  user?: User | null;
 }
+
+// Enhanced AI options with user context
+export interface AzureAIOptions {
+  enableStreaming?: boolean;
+  systemMessage?: string;
+  chatOptions?: ChatCompletionOptions;
+  userContext?: UserContext;
+}
+
+// Function to create personalized system message
+const createPersonalizedSystemMessage = (baseSystemMessage: string, user?: User | null): string => {
+  if (!user) {
+    return baseSystemMessage;
+  }
+
+  const userInfo = [];
+  
+  // Add user's name if available
+  if (user.firstName || user.lastName) {
+    const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ');
+    userInfo.push(`The user's name is ${fullName}.`);
+  } else if (user.username) {
+    userInfo.push(`The user goes by ${user.username}.`);
+  }
+
+  // Add age if available
+  if (user.age) {
+    userInfo.push(`They are ${user.age} years old.`);
+  }
+
+  // Add bio if available
+  if (user.bio) {
+    userInfo.push(`About them: ${user.bio}`);
+  }
+
+  // Add date of birth if available (for context like birthday wishes, etc.)
+  if (user.dateOfBirth) {
+    const birthDate = new Date(user.dateOfBirth);
+    const today = new Date();
+    const isToday = birthDate.getMonth() === today.getMonth() && birthDate.getDate() === today.getDate();
+    
+    if (isToday) {
+      userInfo.push(`Today is their birthday! 🎉`);
+    } else {
+      const birthMonth = birthDate.toLocaleDateString('en-US', { month: 'long' });
+      const birthDay = birthDate.getDate();
+      userInfo.push(`Their birthday is ${birthMonth} ${birthDay}.`);
+    }
+  }
+
+  // If we have user information, add it to the system message
+  if (userInfo.length > 0) {
+    const userContextSection = `
+
+USER CONTEXT:
+${userInfo.join(' ')}
+
+Please use this information to personalize your responses naturally. Address them by name when appropriate, reference their interests or background when relevant, and make the conversation feel more personal and engaging.`;
+
+    return baseSystemMessage + userContextSection;
+  }
+
+  return baseSystemMessage;
+};
 
 interface UseAzureAIReturn {
   sendMessage: (messages: Message[]) => Promise<string>;
@@ -140,7 +204,7 @@ interface UseAzureAIReturn {
 
 const SELECTED_MODEL_KEY = 'azure-ai-selected-model';
 
-export const useAzureAI = (options: UseAzureAIOptions = {}): UseAzureAIReturn => {
+export const useAzureAI = (options: AzureAIOptions = {}): UseAzureAIReturn => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentModel, setCurrentModel] = useState<string | null>(null);
@@ -210,12 +274,13 @@ export const useAzureAI = (options: UseAzureAIOptions = {}): UseAzureAIReturn =>
   // Convert app messages to Azure AI format
   const convertToAzureAIMessages = useCallback((messages: Message[]): AzureAIMessage[] => {
     const systemContent = options.systemMessage || SYSTEM_MESSAGE_PRESETS.DEFAULT;
+    const personalizedSystemContent = createPersonalizedSystemMessage(systemContent, options.userContext?.user);
       
     // Add system message
     const azureMessages: AzureAIMessage[] = [
       {
         role: "system",
-        content: systemContent
+        content: personalizedSystemContent
       }
     ];
 
@@ -230,7 +295,7 @@ export const useAzureAI = (options: UseAzureAIOptions = {}): UseAzureAIReturn =>
     });
 
     return azureMessages;
-  }, [options.systemMessage]);
+  }, [options.systemMessage, options.userContext?.user]);
 
   // Send non-streaming message
   const sendMessage = useCallback(async (messages: Message[]): Promise<string> => {

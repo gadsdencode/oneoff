@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useAzureAI, SYSTEM_MESSAGE_PRESETS } from "../hooks/useAzureAI";
+import { useAuth } from "../hooks/useAuth";
 import { SystemMessageSelector } from "./SystemMessageSelector";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
@@ -14,6 +15,7 @@ interface Message {
 }
 
 export const SystemMessageDemo: React.FC = () => {
+  const { user } = useAuth();
   const [selectedPreset, setSelectedPreset] = useState<keyof typeof SYSTEM_MESSAGE_PRESETS | "custom">("DEFAULT");
   const [customSystemMessage, setCustomSystemMessage] = useState<string>("");
   const [messages, setMessages] = useState<Message[]>([]);
@@ -38,7 +40,8 @@ export const SystemMessageDemo: React.FC = () => {
     chatOptions: {
       maxTokens: 1024,
       temperature: 0.7
-    }
+    },
+    userContext: { user }
   });
 
   const handlePresetChange = (preset: keyof typeof SYSTEM_MESSAGE_PRESETS | "custom", message?: string) => {

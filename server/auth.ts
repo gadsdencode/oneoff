@@ -28,16 +28,13 @@ declare global {
 
 // Serialize user for session storage
 passport.serializeUser((user: any, done) => {
-  console.log('Serializing user:', user.id);
   done(null, user.id);
 });
 
 // Deserialize user from session
 passport.deserializeUser(async (id: number, done) => {
-  console.log('Deserializing user with ID:', id);
   try {
     const user = await storage.getUser(id);
-    console.log('Found user in database:', user ? 'Yes' : 'No');
     if (user) {
       // Return user without sensitive data
       const safeUser = {
@@ -54,10 +51,8 @@ passport.deserializeUser(async (id: number, done) => {
         createdAt: user.createdAt ?? new Date(),
         updatedAt: user.updatedAt ?? new Date(),
       };
-      console.log('Deserialized user:', safeUser.email);
       done(null, safeUser as any);
     } else {
-      console.log('User not found in database');
       done(null, false);
     }
   } catch (error) {
@@ -184,18 +179,9 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
 
 // Middleware to check if user is authenticated
 export const requireAuth = (req: any, res: any, next: any) => {
-  console.log('RequireAuth middleware called for:', req.method, req.path);
-  console.log('Session ID:', req.sessionID);
-  console.log('Session:', req.session);
-  console.log('Is authenticated:', req.isAuthenticated());
-  console.log('User from req:', req.user);
-  
   if (req.isAuthenticated()) {
-    console.log('Authentication successful, proceeding to next middleware');
     return next();
   }
-  
-  console.log('Authentication failed, returning 401');
   res.status(401).json({ error: "Authentication required" });
 };
 
