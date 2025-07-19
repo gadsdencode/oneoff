@@ -27,7 +27,7 @@ app.use(
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: process.env.NODE_ENV === "production", // Use secure cookies in production
+      secure: false, // Set to false for Replit deployments - Replit handles HTTPS at the edge
       httpOnly: true,
       maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
       sameSite: 'lax', // Allow cookies to be sent with same-site requests

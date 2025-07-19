@@ -28,13 +28,16 @@ declare global {
 
 // Serialize user for session storage
 passport.serializeUser((user: any, done) => {
+  console.log('Serializing user:', user.id);
   done(null, user.id);
 });
 
 // Deserialize user from session
 passport.deserializeUser(async (id: number, done) => {
+  console.log('Deserializing user with ID:', id);
   try {
     const user = await storage.getUser(id);
+    console.log('Found user in database:', user ? 'Yes' : 'No');
     if (user) {
       // Return user without sensitive data
       const safeUser = {
@@ -51,11 +54,14 @@ passport.deserializeUser(async (id: number, done) => {
         createdAt: user.createdAt ?? new Date(),
         updatedAt: user.updatedAt ?? new Date(),
       };
+      console.log('Deserialized user:', safeUser.email);
       done(null, safeUser as any);
     } else {
+      console.log('User not found in database');
       done(null, false);
     }
   } catch (error) {
+    console.error('Error deserializing user:', error);
     done(error, false);
   }
 });
