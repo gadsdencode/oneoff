@@ -1,18 +1,9 @@
-import { users, type User, type InsertUser, type RegisterUser, type OAuthUser } from "@shared/schema";
-import { drizzle } from "drizzle-orm/neon-http";
-import { neon } from "@neondatabase/serverless";
-import { eq, or } from "drizzle-orm";
+import { users, type User, type InsertUser, type RegisterUser, type OAuthUser, type UpdateProfile } from "@shared/schema";
+import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { db } from "./db";
 import dotenv from "dotenv";
 dotenv.config();
-
-if (!process.env.DATABASE_URL) {
-  throw new Error("DATABASE_URL is required");
-}
-
-const sql = neon(process.env.DATABASE_URL);
-const db = drizzle(sql);
 
 export interface IStorage {
   // User CRUD operations
@@ -25,6 +16,7 @@ export interface IStorage {
   createUser(user: RegisterUser): Promise<User>;
   createOAuthUser(user: OAuthUser): Promise<User>;
   updateUser(id: number, updates: Partial<User>): Promise<User | undefined>;
+  updateUserProfile(id: number, profileData: UpdateProfile): Promise<User | undefined>;
   verifyPassword(email: string, password: string): Promise<User | null>;
   
   // OAuth linking
@@ -100,6 +92,9 @@ export class DatabaseStorage implements IStorage {
         firstName: userData.firstName || null,
         lastName: userData.lastName || null,
         emailVerified: false,
+        age: null,
+        dateOfBirth: null,
+        bio: null,
       };
       
       const result = await db.insert(users).values(newUser).returning();
@@ -139,6 +134,9 @@ export class DatabaseStorage implements IStorage {
         avatar: userData.avatar || null,
         emailVerified: userData.emailVerified ?? true,
         password: null, // OAuth users don't have passwords initially
+        age: null,
+        dateOfBirth: null,
+        bio: null,
       };
       
       const result = await db.insert(users).values(newUser).returning();
@@ -159,6 +157,20 @@ export class DatabaseStorage implements IStorage {
       return result[0];
     } catch (error) {
       console.error("Error updating user:", error);
+      return undefined;
+    }
+  }
+
+  async updateUserProfile(id: number, profileData: UpdateProfile): Promise<User | undefined> {
+    try {
+      const result = await db
+        .update(users)
+        .set({ ...profileData, updatedAt: new Date() })
+        .where(eq(users.id, id))
+        .returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error updating user profile:", error);
       return undefined;
     }
   }
@@ -193,7 +205,7 @@ export class DatabaseStorage implements IStorage {
   }
 }
 
-// Keep memory storage for development/testing purposes
+// Keep memory storage for development/testing purposes (fallback)
 export class MemStorage implements IStorage {
   private users: Map<number, User>;
   currentId: number;
@@ -246,6 +258,9 @@ export class MemStorage implements IStorage {
       emailVerified: false,
       googleId: null,
       avatar: null,
+      age: null,
+      dateOfBirth: null,
+      bio: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -269,6 +284,9 @@ export class MemStorage implements IStorage {
       emailVerified: userData.emailVerified ?? true,
       googleId: userData.googleId || null,
       avatar: userData.avatar || null,
+      age: null,
+      dateOfBirth: null,
+      bio: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -286,6 +304,15 @@ export class MemStorage implements IStorage {
     return updatedUser;
   }
 
+  async updateUserProfile(id: number, profileData: UpdateProfile): Promise<User | undefined> {
+    const user = this.users.get(id);
+    if (!user) return undefined;
+
+    const updatedUser = { ...user, ...profileData, updatedAt: new Date() };
+    this.users.set(id, updatedUser);
+    return updatedUser;
+  }
+
   async verifyPassword(email: string, password: string): Promise<User | null> {
     const user = await this.getUserByEmail(email);
     if (!user || !user.password) return null;
@@ -299,30 +326,5 @@ export class MemStorage implements IStorage {
   }
 }
 
-
-// Use database storage in production, memory storage for development
-export const storage = process.env.NODE_ENV === 'production' || process.env.DATABASE_URL
-  ? new DatabaseStorage()
-  : new MemStorage();
-=======
-export class DatabaseStorage implements IStorage {
-  async getUser(id: number): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user || undefined;
-  }
-
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
-    return user || undefined;
-  }
-
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const [user] = await db
-      .insert(users)
-      .values(insertUser)
-      .returning();
-    return user;
-  }
-}
-
+// Always use database storage since Replit has PostgreSQL configured
 export const storage = new DatabaseStorage();

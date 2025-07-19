@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Send,
@@ -32,6 +32,7 @@ import ImproveModal from './ImproveModal';
 import AnalyzeModal from './AnalyzeModal';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { toast } from "sonner";
+import { useAuth } from '../hooks/useAuth';
 
 interface ParticlesProps {
   className?: string;
@@ -544,10 +545,55 @@ const OrigamiModal: React.FC<{
 );
 
 const FuturisticAIChat: React.FC = () => {
+  const { user } = useAuth(); // Get user context for AI personalization
+  
+  // Create personalized welcome message
+  const getPersonalizedWelcome = useCallback(() => {
+    if (!user) {
+      return "Hello! I'm Nomad AI. What would you like to accomplish today?";
+    }
+
+    const name = user.firstName || user.username || "there";
+    const greeting = `Hello ${name}! I'm Nomad AI.`;
+    
+    const personalizations = [];
+    
+    if (user.bio) {
+      personalizations.push(`I see you're interested in ${user.bio.toLowerCase()}.`);
+    }
+    
+    if (user.age) {
+      if (user.age < 25) {
+        personalizations.push("I'm here to help with any questions or projects you're working on.");
+      } else if (user.age < 40) {
+        personalizations.push("Whether it's work, personal projects, or learning something new, I'm here to assist.");
+      } else {
+        personalizations.push("I'm here to help with any professional or personal endeavors.");
+      }
+    }
+
+    // Check for birthday
+    if (user.dateOfBirth) {
+      const birthDate = new Date(user.dateOfBirth);
+      const today = new Date();
+      const isToday = birthDate.getMonth() === today.getMonth() && birthDate.getDate() === today.getDate();
+      
+      if (isToday) {
+        return `🎉 ${greeting} Happy Birthday! I hope you're having a wonderful day. What would you like to explore together today?`;
+      }
+    }
+    
+    if (personalizations.length > 0) {
+      return `${greeting} ${personalizations.join(' ')} What would you like to work on today?`;
+    }
+    
+    return `${greeting} What would you like to accomplish today?`;
+  }, [user]);
+
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
-      content: "Hello! I'm Nomad AI. What would you like to accomplish today?",
+      content: getPersonalizedWelcome(),
       role: "assistant",
       timestamp: new Date(),
     }
@@ -613,7 +659,8 @@ const FuturisticAIChat: React.FC = () => {
       maxTokens: 2048,
       temperature: 0.8,
       topP: 0.1
-    }
+    },
+    userContext: { user } // Pass user context correctly
   });
 
   // Get AI service instance for intelligent toasts
@@ -657,7 +704,7 @@ const FuturisticAIChat: React.FC = () => {
       setMessages([
         {
           id: "1",
-          content: "Hello! I'm Nomad AI. What would you like to accomplish today?",
+          content: getPersonalizedWelcome(),
           role: "assistant",
           timestamp: new Date(),
         }
@@ -968,6 +1015,20 @@ const FuturisticAIChat: React.FC = () => {
       }
     }
   };
+
+  // Update welcome message when user profile changes
+  useEffect(() => {
+    setMessages(prev => {
+      const newMessages = [...prev];
+      if (newMessages.length > 0 && newMessages[0].id === "1") {
+        newMessages[0] = {
+          ...newMessages[0],
+          content: getPersonalizedWelcome(),
+        };
+      }
+      return newMessages;
+    });
+  }, [getPersonalizedWelcome]);
 
   return (
     <div className="min-h-screen bg-slate-950 text-white relative overflow-hidden">

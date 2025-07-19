@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { requireAuth, requireGuest } from "./auth";
 import passport from "./auth";
-import { registerUserSchema, loginUserSchema, publicUserSchema } from "@shared/schema";
+import { registerUserSchema, loginUserSchema, publicUserSchema, updateProfileSchema } from "@shared/schema";
 import multer from 'multer';
 import ModelClient from "@azure-rest/ai-inference";
 import { AzureKeyCredential } from "@azure/core-auth";
@@ -387,6 +387,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.redirect("/?auth=success");
     }
   );
+
+  // =============================================================================
+  // USER PROFILE ROUTES
+  // =============================================================================
+  
+  // Get user profile
+  app.get("/api/user/profile", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.user!.id);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      // Return public user data (excluding password and sensitive info)
+      const profile = {
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        avatar: user.avatar,
+        age: user.age,
+        dateOfBirth: user.dateOfBirth,
+        bio: user.bio,
+        emailVerified: user.emailVerified,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      };
+      
+      res.json({ 
+        success: true, 
+        profile 
+      });
+    } catch (error) {
+      console.error("Get profile error:", error);
+      res.status(500).json({ error: "Failed to get profile" });
+    }
+  });
+
+  // Update user profile
+  app.put("/api/user/profile", requireAuth, async (req, res) => {
+    try {
+      const validatedData = updateProfileSchema.parse(req.body);
+      
+      // Check if username is being updated and if it's already taken
+      if (validatedData.username && validatedData.username !== req.user!.username) {
+        const existingUser = await storage.getUserByUsername(validatedData.username);
+        if (existingUser && existingUser.id !== req.user!.id) {
+          return res.status(409).json({ error: "Username already taken" });
+        }
+      }
+
+      const updatedUser = await storage.updateUserProfile(req.user!.id, validatedData);
+      
+      if (!updatedUser) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Return public user data
+      const profile = {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        username: updatedUser.username,
+        firstName: updatedUser.firstName,
+        lastName: updatedUser.lastName,
+        avatar: updatedUser.avatar,
+        age: updatedUser.age,
+        dateOfBirth: updatedUser.dateOfBirth,
+        bio: updatedUser.bio,
+        emailVerified: updatedUser.emailVerified,
+        createdAt: updatedUser.createdAt,
+        updatedAt: updatedUser.updatedAt,
+      };
+
+      res.json({ 
+        success: true, 
+        message: "Profile updated successfully",
+        profile 
+      });
+    } catch (error: any) {
+      console.error("Update profile error:", error);
+      if (error.issues) {
+        // Zod validation error
+        res.status(400).json({ 
+          error: "Validation failed", 
+          details: error.issues 
+        });
+      } else {
+        res.status(500).json({ error: "Failed to update profile" });
+      }
+    }
+  });
 
   // =============================================================================
   // EXISTING ROUTES BELOW
