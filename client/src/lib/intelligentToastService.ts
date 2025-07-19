@@ -209,32 +209,33 @@ export class IntelligentToastService {
       // Try Azure AI analysis first
       let analysis = null;
       try {
+        console.log('🚀 Attempting Azure AI analysis...');
         analysis = await this.performConversationAnalysis(messages, currentModel);
-        console.log('✅ Azure AI analysis completed:', analysis);
+        console.log('✅ Azure AI analysis completed successfully');
+        console.log('📋 Analysis result structure:', {
+          hasUserInteractionStyle: !!analysis?.userInteractionStyle,
+          hasBehavioralInsights: !!analysis?.behavioralInsights,
+          hasConversationDynamics: !!analysis?.conversationDynamics,
+          keys: Object.keys(analysis || {})
+        });
       } catch (aiError) {
         console.warn('⚠️ Azure AI analysis failed, using fallback:', aiError);
+        console.warn('🔍 Error details:', aiError instanceof Error ? aiError.message : String(aiError));
         // Generate fallback analysis without Azure AI
         analysis = this.generateEnhancedFallbackAnalysis(messages, currentModel);
-        console.log('🔄 Using fallback analysis:', analysis);
+        console.log('🔄 Fallback analysis completed');
+        console.log('📋 Fallback analysis structure:', {
+          hasUserInteractionStyle: !!analysis?.userInteractionStyle,
+          hasBehavioralInsights: !!analysis?.behavioralInsights,
+          hasConversationDynamics: !!analysis?.conversationDynamics,
+          keys: Object.keys(analysis || {})
+        });
       }
       
       // Generate recommendations based on analysis (or fallback)
       const recommendations = this.generateRecommendations(analysis, currentModel);
       console.log(`💡 Generated ${recommendations.length} recommendations:`, recommendations.map((r: SmartToast) => r.title));
-      
-      // TEMPORARY: Always add a test recommendation to verify the system works
-      if (messages.length >= 2) {
-        const testRecommendation = {
-          id: `test-recommendation-${Date.now()}`,
-          title: "🧪 Smart Analysis Complete",
-          description: `Analyzed ${messages.length} messages. System is working correctly!`,
-          category: 'insight' as const,
-          priority: 'medium' as const,
-          actionable: false
-        };
-        recommendations.unshift(testRecommendation);
-        console.log('➕ Added test recommendation:', testRecommendation);
-      }
+      console.log('📊 Analysis data received:', JSON.stringify(analysis, null, 2));
       
       console.log('📋 All recommendations before selection:', recommendations);
       console.log('🔍 Previously shown recommendations:', Array.from(this.shownRecommendations));
@@ -721,15 +722,8 @@ Return ONLY a JSON object with this structure:
     console.log('💡 Generating recommendations with analysis:', analysis);
     console.log('📊 Current metrics:', this.metrics);
 
-    // ALWAYS add a basic engagement recommendation for testing
-    recommendations.push({
-      id: `engagement-${Date.now()}`,
-      title: "💬 Conversation Insights",
-      description: `You're actively exploring with ${this.metrics.messageCount} messages. Keep the great questions coming!`,
-      category: 'insight',
-      priority: 'low',
-      actionable: false
-    });
+    // Only add basic engagement recommendation if no analysis is available
+    // This will be replaced by AI insights when analysis is working
 
     // Conversation milestone - more frequent (every 3 messages instead of 5)
     if (this.metrics.messageCount >= 3 && this.metrics.messageCount % 3 === 0) {
@@ -764,9 +758,26 @@ Return ONLY a JSON object with this structure:
 
     // Add insight-based recommendations
     if (analysis.userInteractionStyle || analysis.behavioralInsights) {
+      console.log('🧠 Analysis has insight data, generating insight-based recommendations...');
+      console.log('📋 userInteractionStyle:', analysis.userInteractionStyle);
+      console.log('📋 behavioralInsights:', analysis.behavioralInsights);
+      
       const insightRecommendations = this.generateInsightBasedRecommendations(analysis);
       recommendations.push(...insightRecommendations);
-      console.log(`💡 Generated ${insightRecommendations.length} insight-based recommendations`);
+      console.log(`💡 Generated ${insightRecommendations.length} insight-based recommendations:`, 
+        insightRecommendations.map((r: SmartToast) => r.title));
+    } else {
+      console.log('⚠️ Analysis missing insight data. Available keys:', Object.keys(analysis || {}));
+      
+      // Add a fallback engagement recommendation only if no insights available
+      recommendations.push({
+        id: `basic-engagement-${Date.now()}`,
+        title: "💬 Analysis In Progress",
+        description: `Conversation analysis is learning your patterns. More insights will appear as we chat!`,
+        category: 'insight',
+        priority: 'low',
+        actionable: false
+      });
     }
 
     // Model optimization recommendations - with proper filtering and realistic efficiency
