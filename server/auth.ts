@@ -17,6 +17,9 @@ declare global {
       lastName?: string | null;
       emailVerified: boolean;
       avatar?: string | null;
+      age?: number | null;
+      dateOfBirth?: string | null;
+      bio?: string | null;
       createdAt: Date;
       updatedAt: Date;
     }
@@ -42,6 +45,9 @@ passport.deserializeUser(async (id: number, done) => {
         lastName: user.lastName,
         emailVerified: user.emailVerified ?? false,
         avatar: user.avatar,
+        age: user.age,
+        dateOfBirth: user.dateOfBirth,
+        bio: user.bio,
         createdAt: user.createdAt ?? new Date(),
         updatedAt: user.updatedAt ?? new Date(),
       };
@@ -74,6 +80,9 @@ passport.use(
             lastName: user.lastName,
             emailVerified: user.emailVerified ?? false,
             avatar: user.avatar,
+            age: user.age,
+            dateOfBirth: user.dateOfBirth,
+            bio: user.bio,
             createdAt: user.createdAt ?? new Date(),
             updatedAt: user.updatedAt ?? new Date(),
           };
@@ -145,6 +154,9 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
               lastName: user.lastName,
               emailVerified: user.emailVerified ?? false,
               avatar: user.avatar,
+              age: user.age,
+              dateOfBirth: user.dateOfBirth,
+              bio: user.bio,
               createdAt: user.createdAt ?? new Date(),
               updatedAt: user.updatedAt ?? new Date(),
             };

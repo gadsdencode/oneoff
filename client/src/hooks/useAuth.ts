@@ -8,8 +8,20 @@ export interface User {
   lastName?: string | null;
   emailVerified: boolean;
   avatar?: string | null;
+  age?: number | null;
+  dateOfBirth?: string | null;
+  bio?: string | null;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface UpdateProfileData {
+  firstName?: string;
+  lastName?: string;
+  username?: string;
+  age?: number;
+  dateOfBirth?: string;
+  bio?: string;
 }
 
 export interface AuthContextType {
@@ -20,6 +32,8 @@ export interface AuthContextType {
   logout: () => Promise<void>;
   loginWithGoogle: () => void;
   checkAuthStatus: () => Promise<void>;
+  updateProfile: (profileData: UpdateProfileData) => Promise<void>;
+  getProfile: () => Promise<User>;
 }
 
 export interface RegisterData {
@@ -132,6 +146,50 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     window.location.href = '/api/auth/google';
   };
 
+  const updateProfile = async (profileData: UpdateProfileData) => {
+    try {
+      const response = await fetch('/api/user/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(profileData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Profile update failed');
+      }
+
+      if (data.success && data.profile) {
+        setUser(data.profile);
+      }
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const getProfile = async (): Promise<User> => {
+    try {
+      const response = await fetch('/api/user/profile');
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to get profile');
+      }
+
+      if (data.success && data.profile) {
+        setUser(data.profile);
+        return data.profile;
+      } else {
+        throw new Error('Invalid profile data');
+      }
+    } catch (error) {
+      throw error;
+    }
+  };
+
   useEffect(() => {
     checkAuthStatus();
     
@@ -153,6 +211,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     logout,
     loginWithGoogle,
     checkAuthStatus,
+    updateProfile,
+    getProfile,
   };
 
   return React.createElement(AuthContext.Provider, { value }, children);

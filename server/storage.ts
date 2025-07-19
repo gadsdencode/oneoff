@@ -1,4 +1,4 @@
-import { users, type User, type InsertUser, type RegisterUser, type OAuthUser } from "@shared/schema";
+import { users, type User, type InsertUser, type RegisterUser, type OAuthUser, type UpdateProfile } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { db } from "./db";
@@ -16,6 +16,7 @@ export interface IStorage {
   createUser(user: RegisterUser): Promise<User>;
   createOAuthUser(user: OAuthUser): Promise<User>;
   updateUser(id: number, updates: Partial<User>): Promise<User | undefined>;
+  updateUserProfile(id: number, profileData: UpdateProfile): Promise<User | undefined>;
   verifyPassword(email: string, password: string): Promise<User | null>;
   
   // OAuth linking
@@ -91,6 +92,9 @@ export class DatabaseStorage implements IStorage {
         firstName: userData.firstName || null,
         lastName: userData.lastName || null,
         emailVerified: false,
+        age: null,
+        dateOfBirth: null,
+        bio: null,
       };
       
       const result = await db.insert(users).values(newUser).returning();
@@ -130,6 +134,9 @@ export class DatabaseStorage implements IStorage {
         avatar: userData.avatar || null,
         emailVerified: userData.emailVerified ?? true,
         password: null, // OAuth users don't have passwords initially
+        age: null,
+        dateOfBirth: null,
+        bio: null,
       };
       
       const result = await db.insert(users).values(newUser).returning();
@@ -150,6 +157,20 @@ export class DatabaseStorage implements IStorage {
       return result[0];
     } catch (error) {
       console.error("Error updating user:", error);
+      return undefined;
+    }
+  }
+
+  async updateUserProfile(id: number, profileData: UpdateProfile): Promise<User | undefined> {
+    try {
+      const result = await db
+        .update(users)
+        .set({ ...profileData, updatedAt: new Date() })
+        .where(eq(users.id, id))
+        .returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error updating user profile:", error);
       return undefined;
     }
   }
@@ -237,6 +258,9 @@ export class MemStorage implements IStorage {
       emailVerified: false,
       googleId: null,
       avatar: null,
+      age: null,
+      dateOfBirth: null,
+      bio: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -260,6 +284,9 @@ export class MemStorage implements IStorage {
       emailVerified: userData.emailVerified ?? true,
       googleId: userData.googleId || null,
       avatar: userData.avatar || null,
+      age: null,
+      dateOfBirth: null,
+      bio: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -273,6 +300,15 @@ export class MemStorage implements IStorage {
     if (!user) return undefined;
 
     const updatedUser = { ...user, ...updates, updatedAt: new Date() };
+    this.users.set(id, updatedUser);
+    return updatedUser;
+  }
+
+  async updateUserProfile(id: number, profileData: UpdateProfile): Promise<User | undefined> {
+    const user = this.users.get(id);
+    if (!user) return undefined;
+
+    const updatedUser = { ...user, ...profileData, updatedAt: new Date() };
     this.users.set(id, updatedUser);
     return updatedUser;
   }
