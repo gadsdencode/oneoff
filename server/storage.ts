@@ -3,6 +3,7 @@ import { drizzle } from "drizzle-orm/neon-http";
 import { neon } from "@neondatabase/serverless";
 import { eq, or } from "drizzle-orm";
 import bcrypt from "bcryptjs";
+import { db } from "./db";
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -298,7 +299,30 @@ export class MemStorage implements IStorage {
   }
 }
 
+
 // Use database storage in production, memory storage for development
 export const storage = process.env.NODE_ENV === 'production' || process.env.DATABASE_URL
   ? new DatabaseStorage()
   : new MemStorage();
+=======
+export class DatabaseStorage implements IStorage {
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(insertUser)
+      .returning();
+    return user;
+  }
+}
+
+export const storage = new DatabaseStorage();
