@@ -42,8 +42,8 @@ Preferred communication style: Simple, everyday language.
 #### Storage Layer
 - **Database Schema**: User management with username/password authentication
 - **ORM**: Drizzle ORM for type-safe database operations
-- **In-Memory Fallback**: MemStorage class for development without database
-- **Connection**: Neon Database serverless PostgreSQL connection
+- **Storage Implementation**: DatabaseStorage class using PostgreSQL for persistence
+- **Connection**: Neon Database serverless PostgreSQL connection via DATABASE_URL
 
 ## Data Flow
 
