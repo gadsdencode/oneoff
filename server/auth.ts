@@ -178,9 +178,18 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
 
 // Middleware to check if user is authenticated
 export const requireAuth = (req: any, res: any, next: any) => {
+  console.log('RequireAuth middleware called for:', req.method, req.path);
+  console.log('Session ID:', req.sessionID);
+  console.log('Session:', req.session);
+  console.log('Is authenticated:', req.isAuthenticated());
+  console.log('User from req:', req.user);
+  
   if (req.isAuthenticated()) {
+    console.log('Authentication successful, proceeding to next middleware');
     return next();
   }
+  
+  console.log('Authentication failed, returning 401');
   res.status(401).json({ error: "Authentication required" });
 };
 
