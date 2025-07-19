@@ -304,7 +304,7 @@ export class MemStorage implements IStorage {
 export const storage = process.env.NODE_ENV === 'production' || process.env.DATABASE_URL
   ? new DatabaseStorage()
   : new MemStorage();
-=======
+
 export class DatabaseStorage implements IStorage {
   async getUser(id: number): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
