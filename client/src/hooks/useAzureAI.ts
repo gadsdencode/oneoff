@@ -16,6 +16,7 @@ CONVERSATION GUIDELINES:
 - Do not repeat greetings or introductions unless the user specifically asks for them.
 - Build upon previous exchanges and maintain conversational flow.
 - Use the user's name sparingly and naturally when it adds value to the response.
+- Focus on the user's current question or request, not on re-introducing yourself.
 
 CORE PRINCIPLES:
 1. **Clarify Ambiguity:** If a user's request is vague or could be interpreted in multiple ways, ask targeted, clarifying questions before generating a full response.
@@ -293,17 +294,21 @@ export const useAzureAI = (options: AzureAIOptions = {}): UseAzureAIReturn => {
     
     // Check if this is the first real user interaction (excluding welcome message)
     const userMessages = messages.filter(msg => msg.role === "user" && msg.id !== "1");
-    const isFirstUserInteraction = userMessages.length <= 1;
+    
+    // NEVER include user repository after the welcome message has been shown
+    // The welcome message already handled the personalized greeting
+    const hasWelcomeMessage = messages.some(msg => msg.id === "1");
+    const shouldIncludeUserRepository = !hasWelcomeMessage && userMessages.length === 0;
     
     const personalizedSystemContent = createPersonalizedSystemMessage(
       systemContent, 
       options.userContext?.user, 
-      isFirstUserInteraction
+      shouldIncludeUserRepository
     );
       
     // DEBUG: Log the personalized system message
     console.log('🎯 Personalized system message:', personalizedSystemContent.substring(0, 200) + '...');
-    console.log('🔍 Is first user interaction:', isFirstUserInteraction, '| User messages count:', userMessages.length);
+    console.log('🔍 Should include user repository:', shouldIncludeUserRepository, '| Has welcome message:', hasWelcomeMessage, '| User messages count:', userMessages.length);
     
     // Add system message
     const azureMessages: AzureAIMessage[] = [
