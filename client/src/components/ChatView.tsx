@@ -23,6 +23,7 @@ import {
 import { Message, CommandSuggestion, LLMModel, ModelCapabilities } from "../types";
 import { useAzureAI, SYSTEM_MESSAGE_PRESETS } from "../hooks/useAzureAI";
 import { useIntelligentToast } from "../hooks/useIntelligentToast";
+import { AzureAIService } from "../lib/azureAI";
 import LLMModalSelector from './LLMModelSelector';
 import { SystemMessageSelector } from './SystemMessageSelector';
 import CloneUIModal from './CloneUIModal';
@@ -642,7 +643,27 @@ const FuturisticAIChat: React.FC = () => {
   } = useIntelligentToast({
     enabled: true,
     aiService: aiServiceRef.current,
-    toastFunction: toast
+    onModelSwitch: (modelId: string) => {
+      // Find and switch to the recommended model
+      const availableModels = AzureAIService.getAvailableModels();
+      const targetModel = availableModels.find((m: any) => m.id === modelId);
+      if (targetModel) {
+        updateModel(targetModel);
+        toast.success(`Switched to ${targetModel.name}!`);
+      }
+    },
+    onNewChat: () => {
+      // Reset conversation
+      setMessages([
+        {
+          id: "1",
+          content: "Hello! I'm Nomad AI. What would you like to accomplish today?",
+          role: "assistant",
+          timestamp: new Date(),
+        }
+      ]);
+      toast.success("Started new conversation!");
+    }
   });
 
   const scrollToBottom = () => {

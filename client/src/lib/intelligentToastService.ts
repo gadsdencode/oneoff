@@ -55,11 +55,31 @@ export class IntelligentToastService {
   private shownRecommendations: Set<string> = new Set();
   private lastAnalysisTime: number = 0;
   private toastFunction: ToastFunction;
+  private availableModels: LLMModel[] = [];
+  private modelSwitchCallback?: (modelId: string) => void;
+  private newChatCallback?: () => void;
 
-  constructor(aiService: AzureAIService, toastFunction?: ToastFunction) {
+  constructor(
+    aiService: AzureAIService, 
+    toastFunction?: ToastFunction,
+    modelSwitchCallback?: (modelId: string) => void,
+    newChatCallback?: () => void
+  ) {
     this.aiService = aiService;
     this.toastFunction = toastFunction || this.defaultToastFunction;
+    this.modelSwitchCallback = modelSwitchCallback;
+    this.newChatCallback = newChatCallback;
     this.metrics = this.initializeMetrics();
+    this.loadAvailableModels();
+  }
+
+  private loadAvailableModels(): void {
+    try {
+      this.availableModels = AzureAIService.getAvailableModels();
+    } catch (err) {
+      console.warn('Failed to load available models:', err);
+      this.availableModels = [];
+    }
   }
 
   private defaultToastFunction: ToastFunction = (title, options) => {
@@ -131,7 +151,7 @@ export class IntelligentToastService {
       
       // Generate recommendations based on analysis (or fallback)
       const recommendations = this.generateRecommendations(analysis, currentModel);
-      console.log(`💡 Generated ${recommendations.length} recommendations:`, recommendations.map(r => r.title));
+      console.log(`💡 Generated ${recommendations.length} recommendations:`, recommendations.map((r: SmartToast) => r.title));
       
       // TEMPORARY: Always add a test recommendation to verify the system works
       if (messages.length >= 2) {
@@ -190,49 +210,68 @@ export class IntelligentToastService {
 
     console.log('📝 Conversation text preview:', conversationText.substring(0, 200) + '...');
 
-    const analysisPrompt = `Analyze this conversation and provide insights:
+    // Build available models context for AI
+    const modelOptions = this.availableModels
+      .filter(m => m.id !== currentModel.id) // Exclude current model
+      .map(m => ({
+        id: m.id,
+        name: m.name,
+        category: m.category,
+        performance: m.performance,
+        strengths: this.getModelStrengths(m),
+        bestFor: this.getModelBestUseCase(m)
+      }));
 
-Conversation:
+    const analysisPrompt = `Analyze this conversation and recommend the optimal model:
+
+CONVERSATION:
 ${conversationText}
 
-Current Model: ${currentModel.name} (${currentModel.category})
-Model Capabilities: ${JSON.stringify(currentModel.capabilities)}
+CURRENT MODEL:
+- ID: ${currentModel.id}
+- Name: ${currentModel.name}
+- Category: ${currentModel.category}
+- Performance: ${currentModel.performance}
+- Capabilities: ${JSON.stringify(currentModel.capabilities)}
 
-Analyze for:
-1. Topic complexity and technical depth
-2. Task type (coding, creative writing, analysis, etc.)
-3. Whether current model is optimal for the task
-4. Conversation focus and clarity
-5. Potential efficiency improvements
+AVAILABLE ALTERNATIVE MODELS:
+${JSON.stringify(modelOptions, null, 2)}
+
+ANALYSIS CRITERIA:
+1. What type of task is being performed? (coding, creative writing, analysis, research, technical discussion)
+2. What complexity level is required? (simple, moderate, complex, expert)
+3. Is the current model optimal for this specific task?
+4. Which alternative model (if any) would perform significantly better?
+5. How focused is the conversation? (1-10 scale)
+
+IMPORTANT: Only recommend a different model if it would provide meaningfully better results (20%+ improvement) for the specific task being performed.
 
 Return ONLY a JSON object:
 {
   "taskType": "coding|creative|analysis|research|conversation|technical",
   "complexity": "simple|moderate|complex|expert",
   "modelOptimal": true|false,
-  "modelRecommendation": "model-id-if-different",
+  "modelRecommendation": "model-id-only-if-significantly-better",
+  "improvementReason": "specific reason why recommended model is better",
   "focusScore": 1-10,
-  "improvementAreas": ["area1", "area2"],
-  "keyInsights": ["insight1", "insight2"]
+  "confidenceScore": 1-10
 }`;
 
-    try {
-      console.log('📡 Sending request to Azure AI...');
-      const response = await this.aiService.sendChatCompletion([
-        {
-          role: "system",
-          content: "You are an AI conversation analyzer. Provide precise, actionable analysis in JSON format only."
-        },
-        {
-          role: "user",
-          content: analysisPrompt
-        }
-      ], { maxTokens: 500, temperature: 0.3 });
+    const response = await this.aiService.sendChatCompletion([
+      {
+        role: "system",
+        content: "You are an expert AI model analyzer. Recommend model switches only when they provide significant, measurable improvements for the specific task. Be conservative - only recommend changes when clearly beneficial."
+      },
+      {
+        role: "user",
+        content: analysisPrompt
+      }
+    ], { maxTokens: 800, temperature: 0.2 });
 
-      console.log('📡 Azure AI response received:', response.substring(0, 200) + '...');
+    console.log('📡 Azure AI response received:', response.substring(0, 200) + '...');
 
-      // Enhanced JSON parsing with sanitization
-      console.log('🔍 Full Azure AI response for parsing:', response);
+    // Enhanced JSON parsing with sanitization
+          console.log('🔍 Full Azure AI response for parsing:', response);
       const parsed = this.parseAzureAIResponse(response);
       if (parsed) {
         console.log('✅ Successfully parsed Azure AI analysis:', parsed);
@@ -241,10 +280,9 @@ Return ONLY a JSON object:
         console.warn('⚠️ Could not parse Azure AI response, using fallback');
         return null;
       }
-    } catch (apiError) {
+    } catch (apiError: any) {
       console.error('❌ Azure AI API call failed:', apiError);
       throw apiError; // Re-throw so the fallback mechanism kicks in
-    }
   }
 
   /**
@@ -313,7 +351,7 @@ Return ONLY a JSON object:
       // Fix trailing commas in objects and arrays
       .replace(/,(\s*[}\]])/g, '$1')
       // Fix missing quotes around string values
-      .replace(/:\s*([a-zA-Z][a-zA-Z0-9_\-\|\s]*)\s*([,}\]])/g, (match, value, suffix) => {
+      .replace(/:\s*([a-zA-Z][a-zA-Z0-9_\-\|\s]*)\s*([,}\]])/g, (match: string, value: string, suffix: string) => {
         // Don't quote boolean values, numbers, or already quoted strings
         if (value === 'true' || value === 'false' || value === 'null' || 
             /^\d+(\.\d+)?$/.test(value) || value.startsWith('"')) {
@@ -326,7 +364,7 @@ Return ONLY a JSON object:
       // Fix number values that were quoted
       .replace(/:\s*"(\d+(?:\.\d+)?)"/g, ': $1')
       // Fix array syntax issues - handle malformed arrays
-      .replace(/\[\s*([^[\]]*?)\s*\]/g, (match, content) => {
+      .replace(/\[\s*([^[\]]*?)\s*\]/g, (match: string, content: string) => {
         if (!content.trim()) return '[]';
         
         // Split by comma but handle quoted strings
@@ -431,6 +469,30 @@ Return ONLY a JSON object:
     };
   }
 
+  private getModelStrengths(model: LLMModel): string[] {
+    const strengths: string[] = [];
+    
+    if (model.performance >= 95) strengths.push("Exceptional accuracy");
+    if (model.capabilities?.supportsVision) strengths.push("Image analysis");
+    if (model.capabilities?.supportsCodeGeneration) strengths.push("Code generation");
+    if (model.category === "code") strengths.push("Programming expertise");
+    if (model.category === "reasoning") strengths.push("Complex reasoning");
+    if (model.latency < 700) strengths.push("Fast response");
+    if (model.cost < 0.001) strengths.push("Cost-effective");
+    if (model.contextLength > 100000) strengths.push("Long context");
+    
+    return strengths;
+  }
+
+  private getModelBestUseCase(model: LLMModel): string {
+    if (model.category === "code") return "Programming and software development";
+    if (model.category === "multimodal") return "Image analysis and complex tasks";
+    if (model.category === "reasoning") return "Complex problem solving and analysis";
+    if (model.performance >= 95) return "High-accuracy professional tasks";
+    if (model.cost < 0.001) return "High-volume or cost-sensitive applications";
+    return "General-purpose conversations";
+  }
+
   private generateRecommendations(analysis: any, currentModel: LLMModel): SmartToast[] {
     const recommendations: SmartToast[] = [];
 
@@ -478,20 +540,29 @@ Return ONLY a JSON object:
       return recommendations;
     }
 
-    // Model optimization recommendations
-    if (!analysis.modelOptimal && analysis.modelRecommendation) {
-      recommendations.push({
-        id: `model-opt-${analysis.modelRecommendation}`,
-        title: "🚀 Model Optimization",
-        description: `${this.getModelName(analysis.modelRecommendation)} would be ${this.getEfficiencyGain()}% more effective for this ${analysis.taskType} task`,
-        category: 'optimization',
-        priority: 'high',
-        actionable: true,
-        action: {
-          label: "Switch Model",
-          callback: () => this.triggerModelSwitch(analysis.modelRecommendation)
-        }
-      });
+    // Model optimization recommendations - with proper filtering and realistic efficiency
+    if (!analysis.modelOptimal && 
+        analysis.modelRecommendation && 
+        analysis.modelRecommendation !== currentModel.id &&
+        analysis.confidenceScore >= 7) {
+      
+      const recommendedModel = this.availableModels.find(m => m.id === analysis.modelRecommendation);
+      if (recommendedModel) {
+        const efficiencyGain = this.calculateRealEfficiencyGain(currentModel, recommendedModel, analysis.taskType);
+        
+        recommendations.push({
+          id: `model-opt-${analysis.modelRecommendation}`,
+          title: "🚀 Model Optimization",
+          description: `${recommendedModel.name} would be ${efficiencyGain}% more effective for ${analysis.taskType} tasks. ${analysis.improvementReason || 'Better suited for this type of work.'}`,
+          category: 'optimization',
+          priority: 'high',
+          actionable: true,
+          action: {
+            label: "Switch Model",
+            callback: () => this.triggerModelSwitch(analysis.modelRecommendation)
+          }
+        });
+      }
     }
 
     // Performance insights
@@ -683,28 +754,40 @@ Return ONLY a JSON object:
     return Math.max(20, 100 - (topics.size * 2));
   }
 
-  private getModelName(modelId: string): string {
-    // This would be better if connected to your model configurations
-    const modelNames: Record<string, string> = {
-      'gpt-4o': 'GPT-4o',
-      'gpt-4-turbo': 'GPT-4 Turbo',
-      'gpt-3.5-turbo': 'GPT-3.5 Turbo'
+  private calculateRealEfficiencyGain(currentModel: LLMModel, recommendedModel: LLMModel, taskType: string): number {
+    // Calculate efficiency gain based on actual model performance differences
+    let baseGain = Math.max(0, recommendedModel.performance - currentModel.performance);
+    
+    // Apply task-specific multipliers
+    const taskMultipliers: Record<string, number> = {
+      'coding': recommendedModel.capabilities?.supportsCodeGeneration ? 1.5 : 0.8,
+      'technical': recommendedModel.category === 'reasoning' ? 1.4 : 1.0,
+      'analysis': recommendedModel.capabilities?.supportsAnalysis ? 1.3 : 1.0,
+      'creative': recommendedModel.category === 'text' ? 1.2 : 1.0,
+      'multimodal': recommendedModel.capabilities?.supportsVision ? 1.6 : 1.0
     };
-    return modelNames[modelId] || modelId;
-  }
-
-  private getEfficiencyGain(): number {
-    return Math.floor(Math.random() * 30) + 20; // 20-50% improvement
+    
+    const multiplier = taskMultipliers[taskType] || 1.0;
+    const adjustedGain = Math.round(baseGain * multiplier);
+    
+    // Ensure realistic range (15-60% improvement)
+    return Math.max(15, Math.min(60, adjustedGain));
   }
 
   private triggerModelSwitch(modelId: string): void {
-    // This would need to be connected to your model switching logic
-    console.log(`Triggering model switch to: ${modelId}`);
+    if (this.modelSwitchCallback) {
+      this.modelSwitchCallback(modelId);
+    } else {
+      console.warn('Model switch callback not configured');
+    }
   }
 
   private triggerNewChat(): void {
-    // This would need to be connected to your new chat logic
-    console.log('Triggering new chat');
+    if (this.newChatCallback) {
+      this.newChatCallback();
+    } else {
+      console.warn('New chat callback not configured');
+    }
   }
 
   /**

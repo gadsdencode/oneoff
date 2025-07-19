@@ -14,65 +14,21 @@ interface UseIntelligentToastOptions {
       onClick: () => void;
     };
   }) => void;
+  onModelSwitch?: (modelId: string) => void;
+  onNewChat?: () => void;
 }
 
 export const useIntelligentToast = (options: UseIntelligentToastOptions) => {
-  const { enabled = true, aiService, toastFunction } = options;
+  const { enabled = true, aiService, toastFunction, onModelSwitch, onNewChat } = options;
   const serviceRef = useRef<IntelligentToastService | null>(null);
   const lastAnalysisTimeRef = useRef<number>(0);
 
   // Initialize/reinitialize intelligent toast service when AI service becomes available
   useEffect(() => {
-    if (enabled && aiService && toastFunction) {
-      if (!serviceRef.current) {
-        console.log('🚀 Initializing IntelligentToastService');
-        serviceRef.current = new IntelligentToastService(aiService, toastFunction);
-        
-        // Test Azure AI connectivity
-        const testConnectivity = async () => {
-          try {
-            console.log('🔌 Testing Azure AI connectivity...');
-            const testResponse = await aiService.sendChatCompletion([
-              {
-                role: "system", 
-                content: "You are a helpful assistant. Respond concisely."
-              },
-              {
-                role: "user",
-                content: "Hello, respond with just 'OK' to confirm connectivity."
-              }
-            ], { 
-              maxTokens: 10, 
-              temperature: 0
-              // topP will be automatically set to 1 by parameter validation for temperature=0
-            });
-            
-            console.log('✅ Azure AI connectivity test passed:', testResponse);
-            
-            // Show connectivity confirmation
-            toastFunction("🧠 Smart Assistant Ready", {
-              description: "Intelligent recommendations and Azure AI analysis are active",
-              duration: 4000
-            });
-          } catch (error) {
-            console.error('❌ Azure AI connectivity test failed:', error);
-            
-            // Show degraded mode notification
-            toastFunction("🧠 Smart Assistant Ready (Basic Mode)", {
-              description: "Intelligent recommendations active. Azure AI analysis unavailable.",
-              duration: 4000
-            });
-          }
-        };
-        
-        // Run connectivity test after a short delay
-        setTimeout(testConnectivity, 3000);
-      }
-    } else if (!aiService && serviceRef.current) {
-      // Reset service if AI service becomes unavailable
-      serviceRef.current = null;
+    if (enabled && aiService && !serviceRef.current) {
+      serviceRef.current = new IntelligentToastService(aiService, toastFunction, onModelSwitch, onNewChat);
     }
-  }, [enabled, aiService, toastFunction]);
+  }, [enabled, aiService, toastFunction, onModelSwitch, onNewChat]);
 
   // Analyze conversation and show recommendations
   const analyzeConversation = useCallback(async (
