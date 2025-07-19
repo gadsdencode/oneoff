@@ -1,6 +1,9 @@
 import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { requireAuth, requireGuest } from "./auth";
+import passport from "./auth";
+import { registerUserSchema, loginUserSchema, publicUserSchema } from "@shared/schema";
 import multer from 'multer';
 import ModelClient from "@azure-rest/ai-inference";
 import { AzureKeyCredential } from "@azure/core-auth";
@@ -251,6 +254,143 @@ const upload = multer({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  
+  // =============================================================================
+  // AUTHENTICATION ROUTES
+  // =============================================================================
+  
+  // User registration
+  app.post("/api/auth/register", requireGuest, async (req, res) => {
+    try {
+      const validatedData = registerUserSchema.parse(req.body);
+      const user = await storage.createUser(validatedData);
+      
+      // Automatically log in the user after registration
+      req.login(user as any, (err) => {
+        if (err) {
+          console.error("Login after registration failed:", err);
+          return res.status(500).json({ error: "Registration successful but login failed" });
+        }
+        
+        // Return public user data
+        const publicUser = publicUserSchema.parse(user);
+        res.status(201).json({ 
+          success: true, 
+          message: "User registered successfully",
+          user: publicUser 
+        });
+      });
+    } catch (error: any) {
+      console.error("Registration error:", error);
+      if (error.message?.includes("already exists")) {
+        res.status(409).json({ error: error.message });
+      } else if (error.issues) {
+        // Zod validation error
+        res.status(400).json({ 
+          error: "Validation failed", 
+          details: error.issues 
+        });
+      } else {
+        res.status(500).json({ error: "Registration failed" });
+      }
+    }
+  });
+
+  // User login
+  app.post("/api/auth/login", requireGuest, (req, res, next) => {
+    try {
+      const validatedData = loginUserSchema.parse(req.body);
+      
+      passport.authenticate("local", (err: any, user: any, info: any) => {
+        if (err) {
+          console.error("Login error:", err);
+          return res.status(500).json({ error: "Login failed" });
+        }
+        
+        if (!user) {
+          return res.status(401).json({ 
+            error: info?.message || "Invalid email or password" 
+          });
+        }
+        
+        req.login(user, (loginErr) => {
+          if (loginErr) {
+            console.error("Session creation failed:", loginErr);
+            return res.status(500).json({ error: "Login failed" });
+          }
+          
+          res.json({ 
+            success: true, 
+            message: "Login successful",
+            user: user
+          });
+        });
+      })(req, res, next);
+    } catch (error: any) {
+      if (error.issues) {
+        res.status(400).json({ 
+          error: "Validation failed", 
+          details: error.issues 
+        });
+      } else {
+        res.status(400).json({ error: "Invalid login data" });
+      }
+    }
+  });
+
+  // User logout
+  app.post("/api/auth/logout", requireAuth, (req, res) => {
+    req.logout((err) => {
+      if (err) {
+        console.error("Logout error:", err);
+        return res.status(500).json({ error: "Logout failed" });
+      }
+      
+      req.session.destroy((sessionErr) => {
+        if (sessionErr) {
+          console.error("Session destruction failed:", sessionErr);
+          return res.status(500).json({ error: "Logout failed" });
+        }
+        
+        res.json({ success: true, message: "Logout successful" });
+      });
+    });
+  });
+
+  // Get current user
+  app.get("/api/auth/me", requireAuth, (req, res) => {
+    res.json({ 
+      success: true, 
+      user: req.user 
+    });
+  });
+
+  // Check authentication status
+  app.get("/api/auth/status", (req, res) => {
+    res.json({ 
+      authenticated: req.isAuthenticated(),
+      user: req.isAuthenticated() ? req.user : null
+    });
+  });
+
+  // Google OAuth routes
+  app.get("/api/auth/google", 
+    passport.authenticate("google", { 
+      scope: ["profile", "email"] 
+    })
+  );
+
+  app.get("/api/auth/google/callback",
+    passport.authenticate("google", { failureRedirect: "/login?error=oauth_failed" }),
+    (req, res) => {
+      // Successful authentication, redirect to frontend
+      res.redirect("/?auth=success");
+    }
+  );
+
+  // =============================================================================
+  // EXISTING ROUTES BELOW
+  // =============================================================================
   
   // Model capabilities checking endpoint - now returns optimized configurations
   app.get("/api/model/capabilities/:modelId", async (req, res) => {
